@@ -19,16 +19,16 @@ function SquareLattice(nx::Integer,ny::Integer,lbasis::B;periodic::Bool = false)
 end
 
 @inline Base.eltype(L::Lattice) = Base.eltype(L.L);
-@inline vertices(L::Lattice) = LightGraphs.vertices(L.L);
-@inline edges(L::Lattice) = LightGraphs.edges(L.L);
-@inline nv(L::Lattice) = LightGraphs.nv(L.L);
-@inline ne(L::Lattice) = LightGraphs.ne(L.L);
-@inline has_edge(L::Lattice) = LightGraphs.has_edge(L.L);
-@inline has_vertex(L::Lattice) = LightGraphs.has_vertex(L.L);
-@inline inneighbors(L::Lattice) = LightGraphs.inneighbors(L.L);
-@inline outneighbors(L::Lattice) = LightGraphs.outneighbors(L.L);
-@inline is_directed(L::Lattice) = false;
-@inline is_directed(T::Type{L}) where {L<:Lattice} = false;
+@inline LightGraphs.vertices(L::Lattice) = LightGraphs.vertices(L.L);
+@inline LightGraphs.edges(L::Lattice) = LightGraphs.edges(L.L);
+@inline LightGraphs.nv(L::Lattice) = LightGraphs.nv(L.L);
+@inline LightGraphs.ne(L::Lattice) = LightGraphs.ne(L.L);
+@inline LightGraphs.has_edge(L::Lattice) = LightGraphs.has_edge(L.L);
+@inline LightGraphs.has_vertex(L::Lattice) = LightGraphs.has_vertex(L.L);
+@inline LightGraphs.inneighbors(L::Lattice) = LightGraphs.inneighbors(L.L);
+@inline LightGraphs.outneighbors(L::Lattice) = LightGraphs.outneighbors(L.L);
+@inline LightGraphs.is_directed(L::Lattice) = false;
+@inline LightGraphs.is_directed(T::Type{L}) where {L<:Lattice} = false;
 
 #=
 function vunion(L1::SquareLattice,L2::SquareLattice)
