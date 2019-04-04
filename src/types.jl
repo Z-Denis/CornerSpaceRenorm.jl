@@ -2,8 +2,6 @@ using LightGraphs
 
 const AbstractLattice = AbstractGraph{Int64}
 abstract type Lattice <: AbstractLattice end
-abstract type AbstractCorner end
-abstract type AbstractSystem end
 
 struct SquareLattice <: Lattice
     L::SimpleGraph{Int64}
@@ -13,7 +11,7 @@ struct SquareLattice <: Lattice
     extsites::Vector{Int64}
 end
 
-function SquareLattice(nx::Integer,ny::Integer,lbasis::B;periodic::Bool = false) where B<:Basis
+function SquareLattice(nx::Integer,ny::Integer;periodic::Bool = false)
     L = Grid([nx, ny];periodic=periodic);
     V = vertices(L)
     extsites = [V[1:nx]; V[end-nx+1:end];[V[nx*i] for i in 2:ny-1];[V[nx*i+1] for i in 1:ny-2]];
@@ -62,29 +60,42 @@ function hunion(L1::SquareLattice,L2::SquareLattice)
     return SquareLattice(L1.nx,L1.ny+L2.ny,L1.lbasis)
 end
 
-struct System{B<:Basis,L<:Lattice,N,
-              O1<:AbstractOperator{B,B},
-              O2<:AbstractOperator{B,B},
-              O3<:AbstractOperator{B,B}} <: AbstractSystem
+abstract type AbstractSystem end
+
+struct System{L<:Lattice,LB<:Basis,GB<:Basis,
+              O1<:AbstractOperator{GB,GB},O2<:AbstractOperator{LB,LB},
+              O3<:AbstractOperator{LB,LB}} <: AbstractSystem
     # Lattice
     lattice::L
     # Bases
-    lbasis::B
-    gbasis::CompositeBasis{Tuple{Vararg{FockBasis,N}}} # N == nx * ny
+    lbasis::LB
+    gbasis::GB # N == nx * ny
     # Operators
-    lH::O1
+    H::O1
     tH::Tuple{O2,O2}
     J::Vector{O3}
 end
 
-function System(lat::L,lH::O1,tH::Tuple{O2,O2},J::Vector{O3}) where {B<:Basis,L<:Lattice,
-                                                                     O1<:AbstractOperator{B,B},
-                                                                     O2<:AbstractOperator{B,B},
-                                                                     O3<:AbstractOperator{B,B}}
-    @assert lH.basis_r == lH.basis_l
-    @assert all([tH[i].basis_l == lH.basis_l for i in 1:2])
-    @assert all([tH[i].basis_r == lH.basis_l for i in 1:2])
-    @assert all([J[i].basis_l == lH.basis_l for i in 1:length(J)])
-    @assert all([J[i].basis_r == lH.basis_l for i in 1:length(J)])
-    return System{B,L,nv(lat),O1,O2,O3}(lat,lH.basis_l,CompositeBasis([lH.basis_l for i in 1:nv(lat)]...),lH,tH,J)
+function System(lat::L,H::O1,tH::Tuple{O2,O2},J::Vector{O3}) where {L<:Lattice,LB<:Basis,GB<:CompositeBasis,
+                                                                    O1<:AbstractOperator{GB,GB},
+                                                                    O2<:AbstractOperator{LB,LB},
+                                                                    O3<:AbstractOperator{LB,LB}}
+    gbasis = CompositeBasis([H.basis_l for i in 1:nv(lat)]...);
+    lbasis = first(gbasis.bases);
+    @assert H.basis_r == H.basis_l == lbasis
+    @assert first(tH).basis_l == lbasis
+    @assert first(tH).basis_r == lbasis
+    @assert first(J).basis_l == lbasis
+    @assert first(J).basis_r == lbasis
+    return System{L,LB,GB,O1,O2,O3}(lat,lbasis,gbasis,H,tH,J)
+end
+
+struct CornerBasis{T<:Ket} <: Basis
+    shape::Vector{Int}
+    M::Int
+    basisstates::Vector{T}
+    function CornerBasis(kets::Vector{K}) where K<:Ket
+        M = length(kets);
+        new{eltype(kets)}([M], M, kets);
+    end
 end

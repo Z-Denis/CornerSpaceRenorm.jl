@@ -1,5 +1,5 @@
 function hamiltonian(L::Lattice, lH::AbstractOperator{B,B}, tH::Vector{Tuple{Vararg{O,2}}}) where {B<:Basis,O<:AbstractOperator{B,B}}
-    gbasis = CompositeBasis([lH.basis_l for i in 1:LightGraphs.nv(L)]...);
+    gbasis = CompositeBasis([lH.basis_l for i in 1:nv(L)]...);
     H = begin
             if (typeof(lH) <: SparseOperator) && (typeof(lH) <: SparseOperator)
                 SparseOperator(gbasis);
@@ -19,11 +19,11 @@ function hamiltonian(L::Lattice, lH::AbstractOperator{B,B}, tH::Vector{Tuple{Var
     return H;
 end
 
-hamiltonian(s::System) = hamiltonian(s.lattice, s.lH, [s.tH])
+#hamiltonian(s::System) = hamiltonian(s.lattice, s.lH, [s.tH])
 
 function dissipators(L::Lattice, J::Vector{O}) where {B<:Basis,O<:AbstractOperator{B,B}}
     gbasis = CompositeBasis([first(J).basis_l for i in 1:nv(L)]...);
     return union([[embed(gbasis, [v], [J[i]]) for i in 1:length(J)] for v in vertices(L)]...)
 end
 
-dissipators(s::System) = dissipators(s.lattice, s.J)
+#dissipators(s::System) = dissipators(s.lattice, s.J)
