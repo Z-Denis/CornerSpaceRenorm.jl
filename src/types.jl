@@ -7,7 +7,7 @@ struct SquareLattice <: Lattice
     L::SimpleGraph{Int64}
     nx::Int64
     ny::Int64
-
+    
     extsites::Vector{Int64}
 end
 
@@ -62,32 +62,30 @@ end
 
 abstract type AbstractSystem end
 
-struct System{L<:Lattice,LB<:Basis,GB<:Basis,
-              O1<:AbstractOperator{GB,GB},O2<:AbstractOperator{LB,LB},
-              O3<:AbstractOperator{LB,LB}} <: AbstractSystem
+struct System{L<:Lattice,B<:Basis,
+              O1<:AbstractOperator{B,B},O2<:AbstractOperator{B,B},
+              O3<:AbstractOperator{B,B}} <: AbstractSystem
     # Lattice
     lattice::L
     # Bases
-    lbasis::LB
-    gbasis::GB # N == nx * ny
+    gbasis::B
     # Operators
     H::O1
     tH::Tuple{O2,O2}
     J::Vector{O3}
 end
 
-function System(lat::L,H::O1,tH::Tuple{O2,O2},J::Vector{O3}) where {L<:Lattice,LB<:Basis,GB<:CompositeBasis,
-                                                                    O1<:AbstractOperator{GB,GB},
-                                                                    O2<:AbstractOperator{LB,LB},
-                                                                    O3<:AbstractOperator{LB,LB}}
-    gbasis = CompositeBasis([H.basis_l for i in 1:nv(lat)]...);
-    lbasis = first(gbasis.bases);
-    @assert H.basis_r == H.basis_l == lbasis
-    @assert first(tH).basis_l == lbasis
-    @assert first(tH).basis_r == lbasis
-    @assert first(J).basis_l == lbasis
-    @assert first(J).basis_r == lbasis
-    return System{L,LB,GB,O1,O2,O3}(lat,lbasis,gbasis,H,tH,J)
+function System(lat::L,H::O1,tH::Tuple{O2,O2},J::Vector{O3}) where {L<:Lattice,B<:Basis,
+                                                                    O1<:AbstractOperator{B,B},
+                                                                    O2<:AbstractOperator{B,B},
+                                                                    O3<:AbstractOperator{B,B}}
+    gbasis = H.basis_l;
+    @assert H.basis_r == H.basis_l == gbasis
+    @assert first(tH).basis_l == gbasis
+    @assert first(tH).basis_r == gbasis
+    @assert first(J).basis_l == gbasis
+    @assert first(J).basis_r == gbasis
+    return System{L,B,O1,O2,O3}(lat,gbasis,H,tH,J)
 end
 
 struct CornerBasis{T<:Ket} <: Basis

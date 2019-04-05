@@ -9,5 +9,5 @@ export CornerBasis
 include("operators.jl");
 export hamiltonian, dissipators
 include("corner.jl")
-export corner_subspace
+export corner_subspace, cornerize
 end # module
