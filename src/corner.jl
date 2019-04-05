@@ -37,3 +37,10 @@ function corner_subspace(ρA::DenseOperator{B1,B1}, ρB::DenseOperator{B2,B2}, k
     bC = typeof(bA) <: CompositeBasis ? CompositeBasis(bA.bases...,bB.bases...) : CompositeBasis(bA,bB)
     return SubspaceBasis(bC, [ϕs_A[idcs[1]] ⊗ ϕs_B[idcs[2]] for idcs in handles]), prod_pairs
 end
+
+function cornerize(s::AbstractSystem,cspace::SubspaceBasis)
+    P = projector(cspace,s.gbasis);
+    Pd = dagger(P);
+    proj(op) = P*op*Pd;
+    return System(s.lattice,proj(s.H),proj.(s.tH),proj.(s.J));
+end
