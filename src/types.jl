@@ -7,15 +7,21 @@ struct SquareLattice <: Lattice
     L::SimpleGraph{Int64}
     nx::Int64
     ny::Int64
-    
-    extsites::Vector{Int64}
+
+    Vtop::Vector{Int64}
+    Vbottom::Vector{Int64}
+    Vleft::Vector{Int64}
+    Vright::Vector{Int64}
 end
 
 function SquareLattice(nx::Integer,ny::Integer;periodic::Bool = false)
     L = Grid([nx, ny];periodic=periodic);
     V = vertices(L)
-    extsites = [V[1:nx]; V[end-nx+1:end];[V[nx*i] for i in 2:ny-1];[V[nx*i+1] for i in 1:ny-2]];
-    return SquareLattice(L,nx,ny,extsites)
+    Vtop    = [V[nx*i+1] for i in 0:ny-1];
+    Vbottom = [V[nx*i] for i in 1:ny];
+    Vleft   = V[1:nx];
+    Vright  = V[end-nx+1:end];
+    return SquareLattice(L,nx,ny,Vtop,Vbottom,Vleft,Vright)
 end
 
 @inline Base.eltype(L::Lattice) = Base.eltype(L.L);
@@ -29,19 +35,8 @@ end
 @inline LightGraphs.outneighbors(L::Lattice) = LightGraphs.outneighbors(L.L);
 @inline LightGraphs.is_directed(L::Lattice) = false;
 @inline LightGraphs.is_directed(T::Type{L}) where {L<:Lattice} = false;
-@inline extsites(L::Lattice) = L.extsites;
+@inline extsites(L::Lattice) = [L.Vu; L.Vb; L.Vl[2:end-1]; L.Vr[2:end-1]];
 
-#=
-function vunion(L1::SquareLattice,L2::SquareLattice)
-    L1_bottom = [L1.nx*i for i in 1:L1.ny]
-    L2_top = [L2.nx*(i-1)+1 for i in 1:L2.ny]
-    L = blockdiag(L1.L,L2.L);
-    for i in L1.ny
-        add_edge!(L,Edge(L1_bottom[i],nv(L1)+L2_top[i])
-    end
-    return SquareLattice(L1.nx+L2.nx,L1.ny,L1.lbasis)
-end
-=#
 function Base.:union(L1::SquareLattice,L2::SquareLattice)
     if L1.ny == L2.ny
         return vunion(L1,L2)
@@ -52,12 +47,34 @@ function Base.:union(L1::SquareLattice,L2::SquareLattice)
     end
 end
 
-function vunion(L1::SquareLattice,L2::SquareLattice)
-    return SquareLattice(L1.nx+L2.nx,L1.ny,L1.lbasis)
+#function vunion(L1::SquareLattice,L2::SquareLattice)
+#    return SquareLattice(L1.nx+L2.nx,L1.ny,L1.lbasis)
+#end
+
+function vunion(L1::Lattice,L2::Lattice)
+    L = blockdiag(L1.L,L2.L);
+    for i in 1:L1.ny
+        add_edge!(L,Edge(L1.Vbottom[i],nv(L1)+L2.Vtop[i]))
+    end
+    #(L,nx,ny,Vu,Vb,Vl,Vr)
+    return SquareLattice(L,L1.nx+L2.nx,L1.ny,L1.Vtop, nv(L1).+L2.Vbottom,
+                                             L1.Vleft ∪ (nv(L1).+L2.Vleft),
+                                             L1.Vright ∪ (nv(L1).+L2.Vright))
 end
 
+#function hunion(L1::SquareLattice,L2::SquareLattice)
+#    return SquareLattice(L1.nx,L1.ny+L2.ny,L1.lbasis)
+#end
+
 function hunion(L1::SquareLattice,L2::SquareLattice)
-    return SquareLattice(L1.nx,L1.ny+L2.ny,L1.lbasis)
+    L = blockdiag(L1.L,L2.L);
+    for i in 1:L1.nx
+        add_edge!(L,Edge(L1.Vright[i],nv(L1)+L2.Vleft[i]))
+    end
+    #(L,nx,ny,Vu,Vb,Vl,Vr)
+    return SquareLattice(L,L1.nx,L1.ny+L2.ny,L1.Vtop ∪ (nv(L1).+L2.Vtop),
+                                             L1.Vbottom ∪ (nv(L1).+L2.Vbottom),
+                                             L1.Vleft, L2.Vright)
 end
 
 abstract type AbstractSystem end
@@ -71,21 +88,74 @@ struct System{L<:Lattice,B<:Basis,
     gbasis::B
     # Operators
     H::O1
-    tH::Tuple{O2,O2}
+    Httop::Vector{O2}
+    Htbottom::Vector{O2}
+    Htleft::Vector{O2}
+    Htright::Vector{O2}
     J::Vector{O3}
 end
 
-function System(lat::L,H::O1,tH::Tuple{O2,O2},J::Vector{O3}) where {L<:Lattice,B<:Basis,
-                                                                    O1<:AbstractOperator{B,B},
-                                                                    O2<:AbstractOperator{B,B},
-                                                                    O3<:AbstractOperator{B,B}}
+function System(lat::L,H::O1,lHt::O2,J::Vector{O3}) where {N,L<:Lattice,LB<:Basis,
+                                                       B<:CompositeBasis{Tuple{Vararg{LB,N}}},
+                                                       O1<:AbstractOperator{B,B},
+                                                       O2<:AbstractOperator{LB,LB},
+                                                       O3<:AbstractOperator{B,B}}
     gbasis = H.basis_l;
+    @assert nv(lat) == length(gbasis.bases)
+    @assert lHt.basis_l == first(gbasis.bases)
+    #@assert length(Htint) == 2lat.nx+2lat.ny-4
+    #@assert length(Htext) == 2lat.nx+2lat.ny-4
     @assert H.basis_r == H.basis_l == gbasis
-    @assert first(tH).basis_l == gbasis
-    @assert first(tH).basis_r == gbasis
+    #@assert first(Htint).basis_l == gbasis
+    #@assert first(Htext).basis_r == gbasis
     @assert first(J).basis_l == gbasis
     @assert first(J).basis_r == gbasis
-    return System{L,B,O1,O2,O3}(lat,gbasis,H,tH,J)
+    Httop    = [embed(gbasis,[i],[lHt]) for i in lat.Vtop]
+    Htbottom = [embed(gbasis,[i],[lHt]) for i in lat.Vbottom]
+    Htleft   = [embed(gbasis,[i],[lHt]) for i in lat.Vleft]
+    Htright  = [embed(gbasis,[i],[lHt]) for i in lat.Vright]
+
+    return System{L,B,O1,eltype(Httop),O3}(lat,gbasis,H,Httop,Htbottom,Htleft,Htright,J)
+end
+
+function merge(s1::AbstractSystem,s2::AbstractSystem)
+    if s1.lattice.ny == s2.lattice.ny
+        return vmerge(s1,s2)
+    elseif s1.lattice.ny == s2.lattice.ny
+        return hmerge(s1,s2)
+    else
+        error("Systems have incompatible lattice sizes: ($(s1.lattice.nx),$(s1.lattice.ny)) and ($(s2.lattice.nx),$(s2.lattice.ny))")
+    end
+end
+
+function vmerge(s1::AbstractSystem,s2::AbstractSystem)
+    # TO DO: tests
+    lattice = vunion(s1.lattice,s2.lattice)
+    Id1 = one(s1.gbasis)
+    Id2 = one(s2.gbasis)
+    H = s1.H ⊗ Id2 + Id1 ⊗ s2.H
+    for i in 1:length(s1.Htbottom)
+        Ht = s1.Htbottom[i] ⊗ dagger(s2.Httop[i]);
+        H += Ht + dagger(Ht);
+    end
+    J = (s1.J .⊗ Id2) ∪ (Id1 .⊗ s2.J)
+
+    return System{L,B,O1,O2,O3}(lattice,CompositeBasis([s1.gbasis,s2.gbasis]),H,s1.Httop,s2.Htbottom,s1.Htleft ∪ s2.Htleft,s1.Htright ∪ s2.Htright,J)
+end
+
+function hmerge(s1::AbstractSystem,s2::AbstractSystem)
+    # TO DO: tests
+    lattice = hunion(s1.lattice,s2.lattice)
+    Id1 = one(s1.gbasis)
+    Id2 = one(s2.gbasis)
+    H = s1.H ⊗ Id2 + Id1 ⊗ s2.H
+    for i in 1:length(s1.Htright)
+        Ht = s1.Htright[i] ⊗ dagger(s2.Htleft[i]);
+        H += Ht + dagger(Ht);
+    end
+    J = (s1.J .⊗ Id2) ∪ (Id1 .⊗ s2.J)
+
+    return System{L,B,O1,O2,O3}(lattice,CompositeBasis([s1.gbasis,s2.gbasis]),H,s1.Httop ∪ s2.Httop,s1.Htbottom ∪ s2.Htbottom,s1.Htleft,s2.Htright,J)
 end
 
 struct CornerBasis{T<:Ket} <: Basis
