@@ -131,10 +131,10 @@ end
 function vmerge(s1::AbstractSystem,s2::AbstractSystem)
     # TO DO: tests
     lattice = vunion(s1.lattice,s2.lattice)
-    gbasis = CompositeBasis(s1.gbasis.bases...,s2.gbasis.bases...)
     Id1 = one(s1.gbasis)
     Id2 = one(s2.gbasis)
     H = s1.H ⊗ Id2 + Id1 ⊗ s2.H
+    gbasis = H.basis_l;
     for i in 1:length(s1.Htbottom)
         Ht = s1.Htbottom[i] ⊗ dagger(s2.Httop[i]);
         H += Ht + dagger(Ht);
@@ -151,10 +151,10 @@ end
 function hmerge(s1::AbstractSystem,s2::AbstractSystem)
     # TO DO: tests
     lattice = hunion(s1.lattice,s2.lattice)
-    gbasis = CompositeBasis(s1.gbasis.bases...,s2.gbasis.bases...)
     Id1 = one(s1.gbasis)
     Id2 = one(s2.gbasis)
     H = s1.H ⊗ Id2 + Id1 ⊗ s2.H
+    gbasis = H.basis_l;
     for i in 1:length(s1.Htright)
         Ht = s1.Htright[i] ⊗ dagger(s2.Htleft[i]);
         H += Ht + dagger(Ht);
