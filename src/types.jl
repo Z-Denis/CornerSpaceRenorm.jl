@@ -131,7 +131,7 @@ end
 function vmerge(s1::AbstractSystem,s2::AbstractSystem)
     # TO DO: tests
     lattice = vunion(s1.lattice,s2.lattice)
-    gbasis = CompositeBasis([s1.gbasis,s2.gbasis])
+    gbasis = CompositeBasis(s1.gbasis.bases...,s2.gbasis.bases...)
     Id1 = one(s1.gbasis)
     Id2 = one(s2.gbasis)
     H = s1.H ⊗ Id2 + Id1 ⊗ s2.H
@@ -145,12 +145,13 @@ function vmerge(s1::AbstractSystem,s2::AbstractSystem)
     Htleft = [s1.Htleft[i] ⊗ Id2 for i in 1:length(s1.Htleft)] ∪ [Id1 ⊗ s2.Htleft[i] for i in 1:length(s2.Htleft)]
     Htright = [s1.Htright[i] ⊗ Id2 for i in 1:length(s1.Htright)] ∪ [Id1 ⊗ s2.Htright[i] for i in 1:length(s2.Htright)]
 
-    return System{typeof(lattice),typeof(gbasis),typeof(H),eltype(Httop),eltype(J)}(lattice,gbasis,H,s1.Httop,s2.Htbottom,s1.Htleft ∪ s2.Htleft,s1.Htright ∪ s2.Htright,J)
+    return System{typeof(lattice),typeof(gbasis),typeof(H),eltype(Httop),eltype(J)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J)
 end
 
 function hmerge(s1::AbstractSystem,s2::AbstractSystem)
     # TO DO: tests
     lattice = hunion(s1.lattice,s2.lattice)
+    gbasis = CompositeBasis(s1.gbasis.bases...,s2.gbasis.bases...)
     Id1 = one(s1.gbasis)
     Id2 = one(s2.gbasis)
     H = s1.H ⊗ Id2 + Id1 ⊗ s2.H
@@ -158,9 +159,13 @@ function hmerge(s1::AbstractSystem,s2::AbstractSystem)
         Ht = s1.Htright[i] ⊗ dagger(s2.Htleft[i]);
         H += Ht + dagger(Ht);
     end
-    J = (s1.J .⊗ Id2) ∪ (Id1 .⊗ s2.J)
+    J = ([s1.J[i] ⊗ Id2 for i in 1:length(s1.J)]) ∪ ([Id1 ⊗ s2.J[i] for i in 1:length(s2.J)])
+    Httop = [s1.Httop[i] ⊗ Id2 for i in 1:length(s1.Httop)] ∪ [Id1 ⊗ s2.Httop[i] for i in 1:length(s2.Httop)]
+    Htbottom = [s1.Htbottom[i] ⊗ Id2 for i in 1:length(s1.Htbottom)] ∪ [Id1 ⊗ s2.Htbottom[i] for i in 1:length(s2.Htbottom)]
+    Htleft = [s1.Htleft[i] ⊗ Id2 for i in 1:length(s1.Htleft)]
+    Htright = [Id1 ⊗ s2.Htright[i] for i in 1:length(s2.Htright)]
 
-    return System{L,B,O1,O2,O3}(lattice,CompositeBasis([s1.gbasis,s2.gbasis]),H,s1.Httop ∪ s2.Httop,s1.Htbottom ∪ s2.Htbottom,s1.Htleft,s2.Htright,J)
+    return System{typeof(lattice),typeof(gbasis),typeof(H),eltype(Httop),eltype(J)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J)
 end
 
 struct CornerBasis{T<:Ket} <: Basis

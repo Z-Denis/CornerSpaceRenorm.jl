@@ -42,5 +42,11 @@ function cornerize(s::AbstractSystem,cspace::SubspaceBasis)
     P = projector(cspace,s.gbasis);
     Pd = dagger(P);
     proj(op) = P*op*Pd;
-    return System(s.lattice,proj(s.H),proj.(s.tH),proj.(s.J));
+    H = proj(s.H);
+    Httop = proj.(s.Httop);
+    Htbottom = proj.(s.Htbottom);
+    Htleft = proj.(s.Htleft);
+    Htright = proj.(s.Htright);
+    J = proj.(s.J);
+    return System{typeof(s.lattice),typeof(cspace),typeof(H),eltype(Httop),eltype(J)}(s.lattice,cspace,H,Httop,Htbottom,Htleft,Htright,J)
 end
