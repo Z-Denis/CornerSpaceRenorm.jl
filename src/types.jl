@@ -47,34 +47,26 @@ function Base.:union(L1::SquareLattice,L2::SquareLattice)
     end
 end
 
-#function vunion(L1::SquareLattice,L2::SquareLattice)
-#    return SquareLattice(L1.nx+L2.nx,L1.ny,L1.lbasis)
-#end
-
 function vunion(L1::Lattice,L2::Lattice)
     L = blockdiag(L1.L,L2.L);
     for i in 1:L1.ny
         add_edge!(L,Edge(L1.Vbottom[i],nv(L1)+L2.Vtop[i]))
     end
-    #(L,nx,ny,Vu,Vb,Vl,Vr)
+
     return SquareLattice(L,L1.nx+L2.nx,L1.ny,L1.Vtop, nv(L1).+L2.Vbottom,
                                              L1.Vleft ∪ (nv(L1).+L2.Vleft),
                                              L1.Vright ∪ (nv(L1).+L2.Vright))
 end
-
-#function hunion(L1::SquareLattice,L2::SquareLattice)
-#    return SquareLattice(L1.nx,L1.ny+L2.ny,L1.lbasis)
-#end
 
 function hunion(L1::SquareLattice,L2::SquareLattice)
     L = blockdiag(L1.L,L2.L);
     for i in 1:L1.nx
         add_edge!(L,Edge(L1.Vright[i],nv(L1)+L2.Vleft[i]))
     end
-    #(L,nx,ny,Vu,Vb,Vl,Vr)
+
     return SquareLattice(L,L1.nx,L1.ny+L2.ny,L1.Vtop ∪ (nv(L1).+L2.Vtop),
                                              L1.Vbottom ∪ (nv(L1).+L2.Vbottom),
-                                             L1.Vleft, L2.Vright)
+                                             L1.Vleft, nv(L1).+L2.Vright)
 end
 
 abstract type AbstractSystem end
