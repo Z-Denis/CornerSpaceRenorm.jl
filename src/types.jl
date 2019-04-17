@@ -123,9 +123,9 @@ function vmerge(s1::AbstractSystem,s2::AbstractSystem)
     Id2 = one(s2.gbasis)
     H = s1.H ⊗ Id2 + Id1 ⊗ s2.H
     gbasis = H.basis_l;
-    for i in 1:length(s1.Htbottom)
-        Ht = s1.Htbottom[i] ⊗ dagger(s2.Httop[i]);
-        H += Ht + dagger(Ht);
+    @inbounds for i in 1:length(s1.Htbottom)
+        H.data .+= (s1.Htbottom[i] ⊗ dagger(s2.Httop[i])).data;
+        H.data .+= (dagger(s1.Htbottom[i]) ⊗ s2.Httop[i]).data;
     end
     J = ([s1.J[i] ⊗ Id2 for i in 1:length(s1.J)]) ∪ ([Id1 ⊗ s2.J[i] for i in 1:length(s2.J)])
     Httop = [s1.Httop[i] ⊗ Id2 for i in 1:length(s1.Httop)]
@@ -143,9 +143,9 @@ function hmerge(s1::AbstractSystem,s2::AbstractSystem)
     Id2 = one(s2.gbasis)
     H = s1.H ⊗ Id2 + Id1 ⊗ s2.H
     gbasis = H.basis_l;
-    for i in 1:length(s1.Htright)
-        Ht = s1.Htright[i] ⊗ dagger(s2.Htleft[i]);
-        H += Ht + dagger(Ht);
+    @inbounds for i in 1:length(s1.Htright)
+        H.data .+= (s1.Htright[i] ⊗ dagger(s2.Htleft[i])).data;
+        H.data .+= (dagger(s1.Htright[i]) ⊗ s2.Htleft[i]).data;
     end
     J = ([s1.J[i] ⊗ Id2 for i in 1:length(s1.J)]) ∪ ([Id1 ⊗ s2.J[i] for i in 1:length(s2.J)])
     Httop = [s1.Httop[i] ⊗ Id2 for i in 1:length(s1.Httop)] ∪ [Id1 ⊗ s2.Httop[i] for i in 1:length(s2.Httop)]
