@@ -167,13 +167,3 @@ function hmerge(s1::AbstractSystem,s2::AbstractSystem)
 
     return System{typeof(lattice),typeof(gbasis),typeof(H),eltype(Httop),eltype(J)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J)
 end
-
-struct CornerBasis{T<:Ket} <: Basis
-    shape::Vector{Int}
-    M::Int
-    basisstates::Vector{T}
-    function CornerBasis(kets::Vector{K}) where K<:Ket
-        M = length(kets);
-        new{eltype(kets)}([M], M, kets);
-    end
-end
