@@ -47,34 +47,26 @@ function Base.:union(L1::SquareLattice,L2::SquareLattice)
     end
 end
 
-#function vunion(L1::SquareLattice,L2::SquareLattice)
-#    return SquareLattice(L1.nx+L2.nx,L1.ny,L1.lbasis)
-#end
-
 function vunion(L1::Lattice,L2::Lattice)
     L = blockdiag(L1.L,L2.L);
     for i in 1:L1.ny
         add_edge!(L,Edge(L1.Vbottom[i],nv(L1)+L2.Vtop[i]))
     end
-    #(L,nx,ny,Vu,Vb,Vl,Vr)
+
     return SquareLattice(L,L1.nx+L2.nx,L1.ny,L1.Vtop, nv(L1).+L2.Vbottom,
                                              L1.Vleft ∪ (nv(L1).+L2.Vleft),
                                              L1.Vright ∪ (nv(L1).+L2.Vright))
 end
-
-#function hunion(L1::SquareLattice,L2::SquareLattice)
-#    return SquareLattice(L1.nx,L1.ny+L2.ny,L1.lbasis)
-#end
 
 function hunion(L1::SquareLattice,L2::SquareLattice)
     L = blockdiag(L1.L,L2.L);
     for i in 1:L1.nx
         add_edge!(L,Edge(L1.Vright[i],nv(L1)+L2.Vleft[i]))
     end
-    #(L,nx,ny,Vu,Vb,Vl,Vr)
+
     return SquareLattice(L,L1.nx,L1.ny+L2.ny,L1.Vtop ∪ (nv(L1).+L2.Vtop),
                                              L1.Vbottom ∪ (nv(L1).+L2.Vbottom),
-                                             L1.Vleft, L2.Vright)
+                                             L1.Vleft, nv(L1).+L2.Vright)
 end
 
 abstract type AbstractSystem end
@@ -103,11 +95,7 @@ function System(lat::L,H::O1,lHt::O2,J::Vector{O3}) where {N,L<:Lattice,LB<:Basi
     gbasis = H.basis_l;
     @assert nv(lat) == length(gbasis.bases)
     @assert lHt.basis_l == first(gbasis.bases)
-    #@assert length(Htint) == 2lat.nx+2lat.ny-4
-    #@assert length(Htext) == 2lat.nx+2lat.ny-4
     @assert H.basis_r == H.basis_l == gbasis
-    #@assert first(Htint).basis_l == gbasis
-    #@assert first(Htext).basis_r == gbasis
     @assert first(J).basis_l == gbasis
     @assert first(J).basis_r == gbasis
     Httop    = [embed(gbasis,[i],[lHt]) for i in lat.Vtop]
@@ -166,14 +154,4 @@ function hmerge(s1::AbstractSystem,s2::AbstractSystem)
     Htright = [Id1 ⊗ s2.Htright[i] for i in 1:length(s2.Htright)]
 
     return System{typeof(lattice),typeof(gbasis),typeof(H),eltype(Httop),eltype(J)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J)
-end
-
-struct CornerBasis{T<:Ket} <: Basis
-    shape::Vector{Int}
-    M::Int
-    basisstates::Vector{T}
-    function CornerBasis(kets::Vector{K}) where K<:Ket
-        M = length(kets);
-        new{eltype(kets)}([M], M, kets);
-    end
 end
