@@ -95,11 +95,7 @@ function System(lat::L,H::O1,lHt::O2,J::Vector{O3}) where {N,L<:Lattice,LB<:Basi
     gbasis = H.basis_l;
     @assert nv(lat) == length(gbasis.bases)
     @assert lHt.basis_l == first(gbasis.bases)
-    #@assert length(Htint) == 2lat.nx+2lat.ny-4
-    #@assert length(Htext) == 2lat.nx+2lat.ny-4
     @assert H.basis_r == H.basis_l == gbasis
-    #@assert first(Htint).basis_l == gbasis
-    #@assert first(Htext).basis_r == gbasis
     @assert first(J).basis_l == gbasis
     @assert first(J).basis_r == gbasis
     Httop    = [embed(gbasis,[i],[lHt]) for i in lat.Vtop]
