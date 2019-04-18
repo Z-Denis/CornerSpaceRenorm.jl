@@ -68,6 +68,7 @@ function vmerge(s1::AbstractSystem,s2::AbstractSystem)
     Id2 = one(s2.gbasis)
     H = s1.H ⊗ Id2 + Id1 ⊗ s2.H
     gbasis = H.basis_l;
+
     @inbounds for i in 1:length(s1.Htbottom)
         H.data .+= (s1.Htbottom[i] ⊗ dagger(s2.Httop[i])).data;
         H.data .+= (dagger(s1.Htbottom[i]) ⊗ s2.Httop[i]).data;
@@ -118,24 +119,25 @@ function vmerge(s1::AbstractSystem,s2::AbstractSystem,ρ1::DenseOperator{B1,B1},
 
     bC, handles, ϕs_1, ϕs_2 = corner_subspace(ρ1,ρ2,M)
     function 𝒫1(op)
-        opC = DenseOperator(bC,[ϕs_1[hi[1]].data' * (op * ϕs_1[hj[1]]).data * Float64(hi[2] == hj[2]) for hi in handles, hj in handles])
-        return (opC + dagger(opC))/2.
+        # TO DO: take advantage of orthogonormality to get rid of the scalar product on subspace 2
+        return DenseOperator(bC,[transpose(ϕs_1[hi[1]].data) * (op * conj.(ϕs_1[hj[1]])).data * transpose(ϕs_2[hi[2]].data) * conj.(ϕs_2[hj[2]]).data for hi in handles, hj in handles])
     end
     function 𝒫2(op)
-        opC = DenseOperator(bC,[ϕs_2[hi[2]].data' * (op * ϕs_2[hj[2]]).data * Float64(hi[1] == hj[1]) for hi in handles, hj in handles])
-        return (opC + dagger(opC))/2.
+        # TO DO: take advantage of orthogonormality to get rid of the scalar product on subspace 1
+        return DenseOperator(bC,[transpose(ϕs_2[hi[2]].data) * (op * conj.(ϕs_2[hj[2]])).data * transpose(ϕs_1[hi[1]].data) * conj.(ϕs_1[hj[1]]).data for hi in handles, hj in handles])
     end
-    function 𝒫12(op1,op2)
-        opC = DenseOperator(bC,[ϕs_1[hi[1]].data' * (op1 * ϕs_1[hj[1]]).data * ϕs_2[hi[2]].data' * (op2 * ϕs_2[hj[2]]).data for hi in handles, hj in handles])
-        return (opC + dagger(opC))/2.
+    function 𝒫(op1,op2)
+        return DenseOperator(bC,[(transpose(ϕs_1[hi[1]].data) * (op1 * conj.(ϕs_1[hj[1]])).data) * (transpose(ϕs_2[hi[2]].data) * (op2 * conj.(ϕs_2[hj[2]])).data) for hi in handles, hj in handles])
     end
 
     H = 𝒫1(s1.H) + 𝒫1(s2.H);
     gbasis = H.basis_l;
     @inbounds for i in 1:length(s1.Htbottom)
-        Ht = 𝒫12(s1.Htbottom[i],dagger(s2.Httop[i]));
-        H.data .+= Ht.data + Ht.data';
+        Ht = 𝒫(s1.Htbottom[i],dagger(s2.Httop[i])).data;
+        H.data .+= Ht .+ Ht';
     end
+    H.data .= (H.data + H.data')/2.
+
     J = [𝒫1(s1.J[i]) for i in 1:length(s1.J)] ∪ [𝒫2(s2.J[i]) for i in 1:length(s2.J)]
 
     Httop = [𝒫1(s1.Httop[i]) for i in 1:length(s1.Httop)]
@@ -152,23 +154,22 @@ function hmerge(s1::AbstractSystem,s2::AbstractSystem,ρ1::DenseOperator{B1,B1},
 
     bC, handles, ϕs_1, ϕs_2 = corner_subspace(ρ1,ρ2,M)
     function 𝒫1(op)
-        opC = DenseOperator(bC,[ϕs_1[hi[1]].data' * (op * ϕs_1[hj[1]]).data * Float64(hi[2] == hj[2]) for hi in handles, hj in handles])
-        return (opC + dagger(opC))/2.
+        # TO DO: take advantage of orthogonormality to get rid of the scalar product on subspace 2
+        return DenseOperator(bC,[transpose(ϕs_1[hi[1]].data) * (op * conj.(ϕs_1[hj[1]])).data * transpose(ϕs_2[hi[2]].data) * conj.(ϕs_2[hj[2]]).data for hi in handles, hj in handles])
     end
     function 𝒫2(op)
-        opC = DenseOperator(bC,[ϕs_2[hi[2]].data' * (op * ϕs_2[hj[2]]).data * Float64(hi[1] == hj[1]) for hi in handles, hj in handles])
-        return (opC + dagger(opC))/2.
+        # TO DO: take advantage of orthogonormality to get rid of the scalar product on subspace 1
+        return DenseOperator(bC,[transpose(ϕs_2[hi[2]].data) * (op * conj.(ϕs_2[hj[2]])).data * transpose(ϕs_1[hi[1]].data) * conj.(ϕs_1[hj[1]]).data for hi in handles, hj in handles])
     end
-    function 𝒫12(op1,op2)
-        opC = DenseOperator(bC,[ϕs_1[hi[1]].data' * (op1 * ϕs_1[hj[1]]).data * ϕs_2[hi[2]].data' * (op2 * ϕs_2[hj[2]]).data for hi in handles, hj in handles])
-        return (opC + dagger(opC))/2.
+    function 𝒫(op1,op2)
+        return DenseOperator(bC,[(transpose(ϕs_1[hi[1]].data) * (op1 * conj.(ϕs_1[hj[1]])).data) * (transpose(ϕs_2[hi[2]].data) * (op2 * conj.(ϕs_2[hj[2]])).data) for hi in handles, hj in handles])
     end
 
     H = 𝒫1(s1.H) + 𝒫1(s2.H);
     gbasis = H.basis_l;
     @inbounds for i in 1:length(s1.Htbottom)
-        Ht = 𝒫12(s1.Htbottom[i],dagger(s2.Httop[i]));
-        H.data .+= Ht.data + Ht.data';
+        Ht = 𝒫(s1.Htbottom[i],dagger(s2.Httop[i])).data;
+        H.data .+= Ht .+ Ht';
     end
     J = [𝒫1(s1.J[i]) for i in 1:length(s1.J)] ∪ [𝒫2(s2.J[i]) for i in 1:length(s2.J)]
 
