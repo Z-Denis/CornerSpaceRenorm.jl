@@ -102,6 +102,11 @@ function hmerge(s1::AbstractSystem,s2::AbstractSystem)
     return System{typeof(lattice),typeof(gbasis),typeof(H),eltype(Httop),eltype(J)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J)
 end
 
+function hermitianize!(x::AbstractOperator{B,B}) where {B<:Basis}
+    x.data .= (x.data .+ x.data')./2.;
+    nothing
+end
+
 function merge(s1::AbstractSystem,s2::AbstractSystem,ρ1::DenseOperator{B1,B1},ρ2::DenseOperator{B2,B2},M::Int) where {B1<:Basis,B2<:Basis}
     # TO DO: add tests on M
     if s1.lattice.ny == s2.lattice.ny
@@ -136,14 +141,14 @@ function vmerge(s1::AbstractSystem,s2::AbstractSystem,ρ1::DenseOperator{B1,B1},
         Ht = 𝒫(s1.Htbottom[i],dagger(s2.Httop[i])).data;
         H.data .+= Ht .+ Ht';
     end
-    H.data .= (H.data + H.data')/2.
+    hermitianize!(H);
 
     J = [𝒫1(s1.J[i]) for i in 1:length(s1.J)] ∪ [𝒫2(s2.J[i]) for i in 1:length(s2.J)]
 
-    Httop = [𝒫1(s1.Httop[i]) for i in 1:length(s1.Httop)]
-    Htbottom = [𝒫2(s2.Htbottom[i]) for i in 1:length(s2.Htbottom)]
-    Htleft = [𝒫1(s1.Htleft[i]) for i in 1:length(s1.Htleft)] ∪ [𝒫2(s2.Htleft[i]) for i in 1:length(s2.Htleft)]
-    Htright = [𝒫1(s1.Htright[i]) for i in 1:length(s1.Htright)] ∪ [𝒫2(s2.Htright[i]) for i in 1:length(s2.Htright)]
+    Httop = [𝒫1(s1.Httop[i]) for i in 1:length(s1.Httop)];
+    Htbottom = [𝒫2(s2.Htbottom[i]) for i in 1:length(s2.Htbottom)];
+    Htleft = [𝒫1(s1.Htleft[i]) for i in 1:length(s1.Htleft)] ∪ [𝒫2(s2.Htleft[i]) for i in 1:length(s2.Htleft)];
+    Htright = [𝒫1(s1.Htright[i]) for i in 1:length(s1.Htright)] ∪ [𝒫2(s2.Htright[i]) for i in 1:length(s2.Htright)];
 
     return System{typeof(lattice),typeof(gbasis),typeof(H),eltype(Httop),eltype(J)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J)
 end
@@ -171,12 +176,13 @@ function hmerge(s1::AbstractSystem,s2::AbstractSystem,ρ1::DenseOperator{B1,B1},
         Ht = 𝒫(s1.Htbottom[i],dagger(s2.Httop[i])).data;
         H.data .+= Ht .+ Ht';
     end
+    hermitianize!(H);
     J = [𝒫1(s1.J[i]) for i in 1:length(s1.J)] ∪ [𝒫2(s2.J[i]) for i in 1:length(s2.J)]
 
-    Httop = [𝒫1(s1.Httop[i]) for i in 1:length(s1.Httop)] ∪ [𝒫2(s2.Httop[i]) for i in 1:length(s2.Httop)]
-    Htbottom = [𝒫1(s1.Htbottom[i]) for i in 1:length(s1.Htbottom)] ∪ [𝒫2(s2.Htbottom[i]) for i in 1:length(s2.Htbottom)]
-    Htleft = [𝒫1(s1.Htleft[i]) for i in 1:length(s1.Htleft)]
-    Htright = [𝒫2(s2.Htright[i]) for i in 1:length(s2.Htright)]
+    Httop = [𝒫1(s1.Httop[i]) for i in 1:length(s1.Httop)] ∪ [𝒫2(s2.Httop[i]) for i in 1:length(s2.Httop)];
+    Htbottom = [𝒫1(s1.Htbottom[i]) for i in 1:length(s1.Htbottom)] ∪ [𝒫2(s2.Htbottom[i]) for i in 1:length(s2.Htbottom)];
+    Htleft = [𝒫1(s1.Htleft[i]) for i in 1:length(s1.Htleft)];
+    Htright = [𝒫2(s2.Htright[i]) for i in 1:length(s2.Htright)];
 
     return System{typeof(lattice),typeof(gbasis),typeof(H),eltype(Httop),eltype(J)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J)
 end
