@@ -48,6 +48,6 @@ s5 = hmerge(s4c,s4c,ρ4,ρ4,100) # 8 x 8 lattice
 println("Purity = ",real(tr(ρ5*ρ5)),"\n#states = ", real(exp(entropy_vn(ρ5))))
 ```
 ```julia-repl
-julia> Purity = 0.9814902175512817
-julia> #states = 1.0957707314399108
+julia> Purity = 0.9908348764841518
+julia> #states = 1.0494305228388006
 ```
