@@ -3,11 +3,16 @@
 [![Build Status](https://travis-ci.com/Z-Denis/CornerSpaceRenorm.jl.svg?token=XuYcpCDomapYmd2vHj9y&branch=master)](https://travis-ci.com/Z-Denis/CornerSpaceRenorm.jl)
 [![codecov](https://codecov.io/gh/Z-Denis/CornerSpaceRenorm.jl/branch/master/graph/badge.svg?token=EwifsJO3ew)](https://codecov.io/gh/Z-Denis/CornerSpaceRenorm.jl)
 
-Skeleton of what could be a Julia package for performing corner space renormalisation. It currently requires a lot of RAM for large lattices due to all external tunneling terms being stored (which number grows quadratically with the size of the edge).
+Skeleton of what could be a Julia package for performing corner space renormalisation.
 
 ## Examples
 ```julia
 using CornerSpaceRenorm, QuantumOptics
+
+ω = 1.
+κ = 1.
+F = 1e-1 * κ
+J = 1.
 
 # Local hardcore-boson basis
 lb = FockBasis(1)
@@ -16,42 +21,33 @@ L = SquareLattice(2,2)
 # Lattices can be combined: L ∪ L (vunion(L,L)), hunion(L,L)
 gb = CompositeBasis([lb for i in 1:nv(L)])
 # local operators of the tunnelling Hamiltonian
-tH = (destroy(lb),create(lb))
+tH = (J * destroy(lb),create(lb))
 # Build Hamiltonian for the lattice L
-H = hamiltonian(L,number(lb) + 1e-1 * (create(lb) + destroy(lb)),[tH,dagger.(tH)])
+H = hamiltonian(L,ω*number(lb) + F * (create(lb) + destroy(lb)),[tH,dagger.(tH)])
 # Build some jump operators for the lattice L
-J = dissipators(L,[destroy(lb),1e-2 * create(lb)])
+J = dissipators(L,[sqrt(κ) * destroy(lb)])
 
 # Generate a system from a lattice, a Hamiltonian,
 # a local tunnelling operator and jump operators
 s1 = System(L,H,destroy(lb),J)
-# Compute the steady state
+# Compute the steady state (by brute-force integration)
 ρ1 = steadystate.master(s1.H,s1.J)[2][end]
-# Vertically merge two systems
-s2 = vmerge(s1,s1) # 4 x 2 lattice
-# Compute a corner subspace spanned by 50 kets
-cspace, pairs = corner_subspace(ρ1,ρ1,50)
-# cornerize the doubled system
-s2c = cornerize(s2,cspace)
+# Vertically merge two systems into some corner subspace
+# spanned by 100 kets
+s2 = vmerge(s1,s1,ρ1,ρ1,100) # 4 x 2 lattice
+ρ2 = steadystate.master(s2.H,s2.J)[2][end]
 # Repeat
-ρ2 = steadystate.master(s2c.H,s2c.J)[2][end]
-s3 = hmerge(s2c,s2c) # 4 x 4 lattice
-cspace, pairs = corner_subspace(ρ2,ρ2,50)
-s3c = cornerize(s3,cspace)
+s3 = hmerge(s2,s2,ρ2,ρ2,100) # 4 x 4 lattice
+ρ3 = steadystate.master(s3.H,s3.J)[2][end]
 # Again...
-ρ3 = steadystate.master(s3c.H,s3c.J)[2][end]
-s4 = vmerge(s3c,s3c) # 8 x 4 lattice
-cspace, pairs = corner_subspace(ρ3,ρ3,50)
-s4c = cornerize(s4,cspace)
+s4 = vmerge(s3,s3,ρ3,ρ3,100) # 8 x 4 lattice
+ρ4 = steadystate.master(s4.H,s4.J)[2][end]
 # etc.
-ρ4 = steadystate.master(s4c.H,s4c.J)[2][end]
-s5 = hmerge(s4c,s4c) # 8 x 8 lattice
-cspace, pairs = corner_subspace(ρ4,ρ4,50)
-s5c = cornerize(s5,cspace)
-ρ5 = steadystate.master(s5c.H,s5c.J)[2][end]
+s5 = hmerge(s4c,s4c,ρ4,ρ4,100) # 8 x 8 lattice
+ρ5 = steadystate.master(s5.H,s5.J)[2][end]
 println("Purity = ",real(tr(ρ5*ρ5)),"\n#states = ", real(exp(entropy_vn(ρ5))))
 ```
 ```julia-repl
-julia> Purity = 0.9784337030301732
-julia> #states = 1.1039352555204354
+julia> Purity = 0.9814902175512817
+julia> #states = 1.0957707314399108
 ```
