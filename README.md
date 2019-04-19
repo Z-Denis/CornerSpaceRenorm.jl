@@ -51,3 +51,8 @@ println("Purity = ",real(tr(ρ5*ρ5)),"\n#states = ", real(exp(entropy_vn(ρ5)))
 julia> Purity = 0.9908348764841518
 julia> #states = 1.0494305228388006
 ```
+Doubling the corner dimension from `100` to `200` yields
+```julia-repl
+julia> Purity = 0.9937208692824874
+julia> #states = 1.0366056109469342
+```
