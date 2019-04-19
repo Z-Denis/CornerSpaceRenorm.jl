@@ -56,3 +56,11 @@ Doubling the corner dimension from `100` to `200` yields
 julia> Purity = 0.9937208692824874
 julia> #states = 1.0366056109469342
 ```
+A corner dimension of `500` yields
+```julia-repl
+julia> Purity = 0.9939700852528554
+julia> #states = 1.0368529902181345
+```
+that is, from `200` to `500` the relative variation of the entropy is `0.66%` so
+that we do not increase significantly our knowledge about the steady state by
+going to higher corner dimensions, i.e. the corner has reached convergence.
