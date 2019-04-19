@@ -1,10 +1,27 @@
 using DataStructures, LinearAlgebra
 
+"""
+    maxk(a, k)
+
+Find `k` largest elements of an array and return their indices.
+# Arguments
+* `a`: some array.
+* `k`: number of largest elements to be found.
+"""
 function maxk(a::AbstractVector, k::Int)
     ix = partialsortperm(a, 1:k, rev=true)
     @inbounds @views collect(ix), collect(a[ix[1:k]])
 end
 
+"""
+    max_prod_pairs(a, b, k)
+
+Find `k` pairs `(a_i,b_i)` with largest products from two arrays `a` and `b`.
+# Arguments
+* `a`: some array.
+* `b`: some array.
+* `k`: number of largest products to be found.
+"""
 function max_prod_pairs(a::AbstractVector, b::AbstractVector, k::Int)
     ix_a, _a = maxk(a, min(k,length(a)))
     ix_b, _b = maxk(b, min(k,length(b)))
@@ -26,6 +43,17 @@ function max_prod_pairs(a::AbstractVector, b::AbstractVector, k::Int)
     return handles, prod_pairs
 end
 
+"""
+    corner_subspace(ρA, ρB, M)
+
+Find the `SubspaceBasis` associated with the `M`-dimensional corner defined by the
+pair of states `(ρA, ρB)`, the pairs of eigenkets of A and B defining the corner
+basis and the eigenkets of A and B.
+# Arguments
+* `ρA`: density matrix of the subsystem A.
+* `ρB`: density matrix of the subsystem B.
+* `M`: corner dimension.
+"""
 function corner_subspace(ρA::DenseOperator{B1,B1}, ρB::DenseOperator{B2,B2}, M::Int) where {B1<:Basis,B2<:Basis}
     bA = ρA.basis_l
     bB = ρB.basis_l
@@ -38,6 +66,14 @@ function corner_subspace(ρA::DenseOperator{B1,B1}, ρB::DenseOperator{B2,B2}, M
     return SubspaceBasis(bC, [ϕs_A[idcs[1]] ⊗ ϕs_B[idcs[2]] for idcs in handles]), handles, ϕs_A, ϕs_B
 end
 
+"""
+    cornerize(s, cspace)
+
+Project a system into a given corner space.
+# Arguments
+* `s`: `System`.
+* `cspace`: `SubspaceBasis` of the corner.
+"""
 function cornerize(s::AbstractSystem,cspace::SubspaceBasis)
     P = projector(cspace,s.gbasis);
     Pd = dagger(P);
@@ -51,6 +87,14 @@ function cornerize(s::AbstractSystem,cspace::SubspaceBasis)
     return System{typeof(s.lattice),typeof(cspace),typeof(H),eltype(Httop),eltype(J)}(s.lattice,cspace,H,Httop,Htbottom,Htleft,Htright,J)
 end
 
+"""
+    merge(s1, s2)
+
+Merge two `System`s along some compatible dimension with no corner compression.
+# Arguments
+* `s1`: `System`.
+* `s2`: `System`.
+"""
 function merge(s1::AbstractSystem,s2::AbstractSystem)
     if s1.lattice.ny == s2.lattice.ny
         return vmerge(s1,s2)
@@ -61,6 +105,14 @@ function merge(s1::AbstractSystem,s2::AbstractSystem)
     end
 end
 
+"""
+    vmerge(s1, s2)
+
+Merge two `System`s vertically with no corner compression.
+# Arguments
+* `s1`: `System`.
+* `s2`: `System`.
+"""
 function vmerge(s1::AbstractSystem,s2::AbstractSystem)
     # TO DO: tests
     lattice = vunion(s1.lattice,s2.lattice)
@@ -82,6 +134,14 @@ function vmerge(s1::AbstractSystem,s2::AbstractSystem)
     return System{typeof(lattice),typeof(gbasis),typeof(H),eltype(Httop),eltype(J)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J)
 end
 
+"""
+    vmerge(s1, s2)
+
+Merge two `System`s horizontally with no corner compression.
+# Arguments
+* `s1`: `System`.
+* `s2`: `System`.
+"""
 function hmerge(s1::AbstractSystem,s2::AbstractSystem)
     # TO DO: tests
     lattice = hunion(s1.lattice,s2.lattice)
@@ -102,11 +162,28 @@ function hmerge(s1::AbstractSystem,s2::AbstractSystem)
     return System{typeof(lattice),typeof(gbasis),typeof(H),eltype(Httop),eltype(J)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J)
 end
 
+"""
+    hermitianize!(x)
+
+Extract the Hermitian part of `x`.
+# Arguments
+* `x`: some operator.
+"""
 function hermitianize!(x::AbstractOperator{B,B}) where {B<:Basis}
     x.data .= (x.data .+ x.data')./2.;
     nothing
 end
 
+"""
+    merge(s1, s2, ρ1, ρ2, M)
+
+Merge two `System`s along some compatible dimension with corner compression.
+# Arguments
+* `s1`: `System`.
+* `s2`: `System`.
+* `ρ1`: state of the system `s1`.
+* `ρ2`: state of the system `s2`.
+"""
 function merge(s1::AbstractSystem,s2::AbstractSystem,ρ1::DenseOperator{B1,B1},ρ2::DenseOperator{B2,B2},M::Int) where {B1<:Basis,B2<:Basis}
     # TO DO: add tests on M
     if s1.lattice.ny == s2.lattice.ny
@@ -118,6 +195,16 @@ function merge(s1::AbstractSystem,s2::AbstractSystem,ρ1::DenseOperator{B1,B1},�
     end
 end
 
+"""
+    vmerge(s1, s2, ρ1, ρ2, M)
+
+Merge two `System`s vertically along some compatible dimension with corner compression.
+# Arguments
+* `s1`: `System`.
+* `s2`: `System`.
+* `ρ1`: state of the system `s1`.
+* `ρ2`: state of the system `s2`.
+"""
 function vmerge(s1::AbstractSystem,s2::AbstractSystem,ρ1::DenseOperator{B1,B1},ρ2::DenseOperator{B2,B2},M::Int) where {B1<:Basis,B2<:Basis}
     # TO DO: tests
     lattice = vunion(s1.lattice,s2.lattice)
@@ -125,17 +212,18 @@ function vmerge(s1::AbstractSystem,s2::AbstractSystem,ρ1::DenseOperator{B1,B1},
     bC, handles, ϕs_1, ϕs_2 = corner_subspace(ρ1,ρ2,M)
     function 𝒫1(op)
         # TO DO: take advantage of orthogonormality to get rid of the scalar product on subspace 2
-        return DenseOperator(bC,[transpose(ϕs_1[hi[1]].data) * (op * conj.(ϕs_1[hj[1]])).data * transpose(ϕs_2[hi[2]].data) * conj.(ϕs_2[hj[2]]).data for hi in handles, hj in handles])
+        return DenseOperator(bC,[transpose(ϕs_1[hi[1]].data) * (op * conj.(ϕs_1[hj[1]])).data * (transpose(ϕs_2[hi[2]].data) * conj.(ϕs_2[hj[2]]).data) for hi in handles, hj in handles])
     end
     function 𝒫2(op)
         # TO DO: take advantage of orthogonormality to get rid of the scalar product on subspace 1
-        return DenseOperator(bC,[transpose(ϕs_2[hi[2]].data) * (op * conj.(ϕs_2[hj[2]])).data * transpose(ϕs_1[hi[1]].data) * conj.(ϕs_1[hj[1]]).data for hi in handles, hj in handles])
+        return DenseOperator(bC,[transpose(ϕs_2[hi[2]].data) * (op * conj.(ϕs_2[hj[2]])).data * (transpose(ϕs_1[hi[1]].data) * conj.(ϕs_1[hj[1]]).data) for hi in handles, hj in handles])
     end
     function 𝒫(op1,op2)
         return DenseOperator(bC,[(transpose(ϕs_1[hi[1]].data) * (op1 * conj.(ϕs_1[hj[1]])).data) * (transpose(ϕs_2[hi[2]].data) * (op2 * conj.(ϕs_2[hj[2]])).data) for hi in handles, hj in handles])
     end
 
-    H = 𝒫1(s1.H) + 𝒫1(s2.H);
+    # TO DO: exploit Hermicianity of H to compute half of the matrix elements in the corner
+    H = 𝒫1(s1.H) + 𝒫2(s2.H);
     gbasis = H.basis_l;
     @inbounds for i in 1:length(s1.Htbottom)
         Ht = 𝒫(s1.Htbottom[i],dagger(s2.Httop[i])).data;
@@ -153,6 +241,16 @@ function vmerge(s1::AbstractSystem,s2::AbstractSystem,ρ1::DenseOperator{B1,B1},
     return System{typeof(lattice),typeof(gbasis),typeof(H),eltype(Httop),eltype(J)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J)
 end
 
+"""
+    hmerge(s1, s2, ρ1, ρ2, M)
+
+Merge two `System`s horizontally along some compatible dimension with corner compression.
+# Arguments
+* `s1`: `System`.
+* `s2`: `System`.
+* `ρ1`: state of the system `s1`.
+* `ρ2`: state of the system `s2`.
+"""
 function hmerge(s1::AbstractSystem,s2::AbstractSystem,ρ1::DenseOperator{B1,B1},ρ2::DenseOperator{B2,B2},M::Int) where {B1<:Basis,B2<:Basis}
     # TO DO: tests
     lattice = hunion(s1.lattice,s2.lattice)
@@ -170,7 +268,8 @@ function hmerge(s1::AbstractSystem,s2::AbstractSystem,ρ1::DenseOperator{B1,B1},
         return DenseOperator(bC,[(transpose(ϕs_1[hi[1]].data) * (op1 * conj.(ϕs_1[hj[1]])).data) * (transpose(ϕs_2[hi[2]].data) * (op2 * conj.(ϕs_2[hj[2]])).data) for hi in handles, hj in handles])
     end
 
-    H = 𝒫1(s1.H) + 𝒫1(s2.H);
+    # TO DO: exploit Hermicianity of H to compute half of the matrix elements in the corner
+    H = 𝒫1(s1.H) + 𝒫2(s2.H);
     gbasis = H.basis_l;
     @inbounds for i in 1:length(s1.Htbottom)
         Ht = 𝒫(s1.Htbottom[i],dagger(s2.Httop[i])).data;
