@@ -1,3 +1,12 @@
+"""
+    hamiltonian(L, lH, tH)
+
+Construct a Hamiltonian from a `Lattice` and operators.
+# Arguments
+* `L`: Lattice.
+* `lH`: local Hamiltonian.
+* `tH`: `Vector` of `Tuple` of two local operators defining the tunneling.
+"""
 function hamiltonian(L::Lattice, lH::AbstractOperator{B,B}, tH::Vector{Tuple{Vararg{O,2}}}) where {B<:Basis,O<:AbstractOperator{B,B}}
     gbasis = CompositeBasis([lH.basis_l for i in 1:nv(L)]...);
     H = begin
@@ -21,6 +30,14 @@ end
 
 #hamiltonian(s::System) = hamiltonian(s.lattice, s.lH, [s.tH])
 
+"""
+    dissipators(L, J)
+
+Construct the jump operators of a system from a `Lattice` and local jump operators.
+# Arguments
+* `L`: Lattice.
+* `J`: Array of on-site local jump operators.
+"""
 function dissipators(L::Lattice, J::Vector{O}) where {B<:Basis,O<:AbstractOperator{B,B}}
     gbasis = CompositeBasis([first(J).basis_l for i in 1:nv(L)]...);
     return union([[embed(gbasis, [v], [J[i]]) for i in 1:length(J)] for v in vertices(L)]...)

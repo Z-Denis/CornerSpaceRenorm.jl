@@ -1,8 +1,18 @@
 using LightGraphs
 
 const AbstractLattice = AbstractGraph{Int64}
+"""
+    Lattice <: AbstractLattice
+
+Abstract supertype for all lattices.
+"""
 abstract type Lattice <: AbstractLattice end
 
+"""
+    SquareLattice <: Lattice
+
+Square lattice type.
+"""
 struct SquareLattice <: Lattice
     L::SimpleGraph{Int64}
     nx::Int64
@@ -14,6 +24,16 @@ struct SquareLattice <: Lattice
     Vright::Vector{Int64}
 end
 
+"""
+    SquareLattice(nx, ny; periodic = false)
+
+Construct a `SquareLattice` of size `nx`*`ny`.
+
+# Arguments
+* `nx`: size of the first dimension.
+* `ny`: size of the second dimension.
+* `periodic=false`: boundary conditions.
+"""
 function SquareLattice(nx::Integer,ny::Integer;periodic::Bool = false)
     L = Grid([nx, ny];periodic=periodic);
     V = vertices(L)
@@ -24,6 +44,7 @@ function SquareLattice(nx::Integer,ny::Integer;periodic::Bool = false)
     return SquareLattice(L,nx,ny,Vtop,Vbottom,Vleft,Vright)
 end
 
+# Extend AbstractGraph{Int64} methods to all Lattice subtypes.
 @inline Base.eltype(L::Lattice) = Base.eltype(L.L);
 @inline LightGraphs.vertices(L::Lattice) = LightGraphs.vertices(L.L);
 @inline LightGraphs.edges(L::Lattice) = LightGraphs.edges(L.L);
@@ -37,6 +58,11 @@ end
 @inline LightGraphs.is_directed(T::Type{L}) where {L<:Lattice} = false;
 @inline extsites(L::Lattice) = [L.Vu; L.Vb; L.Vl[2:end-1]; L.Vr[2:end-1]];
 
+"""
+    ∪(L1, L2)
+
+Merge two `SquareLattice`s along some compatible dimension.
+"""
 function Base.:union(L1::SquareLattice,L2::SquareLattice)
     if L1.ny == L2.ny
         return vunion(L1,L2)
@@ -47,6 +73,11 @@ function Base.:union(L1::SquareLattice,L2::SquareLattice)
     end
 end
 
+"""
+    vunion(L1, L2)
+
+Merge two `SquareLattice`s `L1` and `L2` vertically.
+"""
 function vunion(L1::Lattice,L2::Lattice)
     L = blockdiag(L1.L,L2.L);
     for i in 1:L1.ny
@@ -58,6 +89,11 @@ function vunion(L1::Lattice,L2::Lattice)
                                              L1.Vright ∪ (nv(L1).+L2.Vright))
 end
 
+"""
+    hunion(L1, L2)
+
+Merge two `SquareLattice`s `L1` and `L2` horizontally.
+"""
 function hunion(L1::SquareLattice,L2::SquareLattice)
     L = blockdiag(L1.L,L2.L);
     for i in 1:L1.nx
@@ -69,8 +105,18 @@ function hunion(L1::SquareLattice,L2::SquareLattice)
                                              L1.Vleft, nv(L1).+L2.Vright)
 end
 
+"""
+    AbstractSystem
+
+Abstract supertype for all systems.
+"""
 abstract type AbstractSystem end
 
+"""
+    System <: AbstractSystem
+
+Quantum dissipative system defined on a square lattice.
+"""
 struct System{L<:Lattice,B<:Basis,
               O1<:AbstractOperator{B,B},O2<:AbstractOperator{B,B},
               O3<:AbstractOperator{B,B}} <: AbstractSystem
@@ -87,6 +133,16 @@ struct System{L<:Lattice,B<:Basis,
     J::Vector{O3}
 end
 
+"""
+    System(lat, H, lHt, J)
+
+Construct a `System` from a `Lattice` and operators defining the model.
+# Arguments
+* `lat`: Lattice.
+* `H`: Hamiltonian of the full system.
+* `lHt`: local tunneling operator.
+* `J`: jump operators of the full system.
+"""
 function System(lat::L,H::O1,lHt::O2,J::Vector{O3}) where {N,L<:Lattice,LB<:Basis,
                                                        B<:CompositeBasis{Tuple{Vararg{LB,N}}},
                                                        O1<:AbstractOperator{B,B},
