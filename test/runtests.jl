@@ -35,7 +35,7 @@ using Test
     # Dumb version
     s1 = System(L,H,destroy(lb),J)
     ρ1 = steadystate.master(s1.H,s1.J)[2][end]
-    s1 = hmerge(s1,s1)
+    s1 = vmerge(s1,s1)
     cspace = corner_subspace(ρ1,ρ1,10)[1]
     s1 = cornerize(s1,cspace)
     ρ1 = steadystate.master(s1.H,s1.J)[2][end]
@@ -46,7 +46,7 @@ using Test
     # Wise version
     s2 = System(L,H,destroy(lb),J)
     ρ2 = steadystate.master(s2.H,s2.J)[2][end]
-    s2 = hmerge(s2,s2,ρ2,ρ2,10)
+    s2 = vmerge(s2,s2,ρ2,ρ2,10)
     ρ2 = steadystate.master(s2.H,s2.J)[2][end]
     s2 = hmerge(s2,s2,ρ2,ρ2,10)
 
@@ -58,4 +58,25 @@ using Test
     @test maximum([maximum(abs2.(s1.Htbottom[i].data .- s2.Htbottom[i].data)) for i in 1:length(s1.Htbottom)]) < tol
     @test maximum([maximum(abs2.(s1.Htleft[i].data .- s2.Htleft[i].data)) for i in 1:length(s1.Htleft)]) < tol
     @test maximum([maximum(abs2.(s1.Htright[i].data .- s2.Htright[i].data)) for i in 1:length(s1.Htright)]) < tol
+
+    # Test ZnLattice and ZnSystem
+    # Check equivalence with SquareLattice
+    ZnL = ZnLattice((2,2))
+    s3 = ZnSystem(ZnL,H,destroy(lb),J)
+    ρ3 = steadystate.master(s3.H,s3.J)[2][end]
+    s3 = merge(s3,s3,1,ρ3,ρ3,10)
+    ρ3 = steadystate.master(s3.H,s3.J)[2][end]
+    s3 = merge(s3,s3,2,ρ3,ρ3,10)
+
+    @test maximum(abs2.(s3.H.data .- s2.H.data)) ≈ 0
+    @test maximum([maximum(abs2.(s3.J[i].data .- s2.J[i].data)) for i in 1:length(s3.J)]) ≈ 0
+    @test maximum([maximum(abs2.(s3.Htint[1][i].data .- s2.Httop[i].data)) for i in 1:length(s3.Htint[1])]) ≈ 0
+    @test maximum([maximum(abs2.(s3.Htint[2][i].data .- s2.Htleft[i].data)) for i in 1:length(s3.Htint[1])]) ≈ 0
+    @test maximum([maximum(abs2.(s3.Htext[1][i].data .- s2.Htbottom[i].data)) for i in 1:length(s3.Htext[1])]) ≈ 0
+    @test maximum([maximum(abs2.(s3.Htext[2][i].data .- s2.Htright[i].data)) for i in 1:length(s3.Htext[1])]) ≈ 0
+
+    # Check steady states
+    ρ3 = steadystate.master(s3.H,s3.J)[2][end]
+    ρ2 = steadystate.master(s2.H,s2.J)[2][end]
+    @test fidelity(ρ3,ρ2) ≈ 1.
 end
