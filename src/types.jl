@@ -1,4 +1,4 @@
-using LightGraphs
+using LightGraphs, GraphPlot
 
 const AbstractLattice = AbstractGraph{Int64}
 """
@@ -44,6 +44,30 @@ function SquareLattice(nx::Integer,ny::Integer;periodic::Bool = false)
     return SquareLattice(L,nx,ny,Vtop,Vbottom,Vleft,Vright)
 end
 
+struct ZnLattice{N} <: Lattice
+    L::SimpleGraph{Int64}
+    shape::Tuple{Vararg{Int,N}}
+
+    Vint::Tuple{Vararg{Vector{Int64},N}}
+    Vext::Tuple{Vararg{Vector{Int64},N}}
+end
+
+function ZnLattice(shape::Tuple{Vararg{Int,N}};periodic::Bool = false) where N
+    @assert N > 0 "The lattice must be positive-dimensional."
+    if N == 1
+        return ZnLattice{1}(Grid(collect(shape);periodic=periodic),shape,([1],),([shape[end]],))
+    else
+        L = Grid(collect(shape);periodic=periodic);
+        lids = LinearIndices(shape)
+        symbids = [1;fill(:(:), N-1)]
+        Vint = Tuple([Core.eval(CornerSpaceRenorm,Expr(:ref, :($lids), circshift(symbids,d)...))[:] for d in 0:N-1])
+        symbids = [:end;fill(:(:), N-1)]
+        Vext = Tuple([Core.eval(Main,Expr(:ref, :($lids), circshift(symbids,d)...))[:] for d in 0:N-1])
+
+        return ZnLattice{N}(L,shape,Vint,Vext)
+    end
+end
+
 # Extend AbstractGraph{Int64} methods to all Lattice subtypes.
 @inline Base.eltype(L::Lattice) = Base.eltype(L.L);
 @inline LightGraphs.vertices(L::Lattice) = LightGraphs.vertices(L.L);
@@ -57,6 +81,9 @@ end
 @inline LightGraphs.is_directed(L::Lattice) = false;
 @inline LightGraphs.is_directed(T::Type{L}) where {L<:Lattice} = false;
 @inline extsites(L::Lattice) = [L.Vu; L.Vb; L.Vl[2:end-1]; L.Vr[2:end-1]];
+
+GraphPlot.gplot(L::Lattice; kwargs...) = GraphPlot.gplot(L.L; kwargs...)
+GraphPlot.gplot(L::Lattice, locs_x_in::Vector{R}, locs_y_in::Vector{R}; kwargs...) where R<:Real = GraphPlot.gplot(L.L, locs_x_in, locs_y_in; kwargs...)
 
 """
     ∪(L1, L2)
@@ -103,6 +130,25 @@ function hunion(L1::SquareLattice,L2::SquareLattice)
     return SquareLattice(L,L1.nx,L1.ny+L2.ny,L1.Vtop ∪ (nv(L1).+L2.Vtop),
                                              L1.Vbottom ∪ (nv(L1).+L2.Vbottom),
                                              L1.Vleft, nv(L1).+L2.Vright)
+end
+
+function Base.union(L1::ZnLattice{N},L2::ZnLattice{N},d::Integer) where N
+    @assert d <= N "Merging direction should be smaller than that of the lattices."
+    @assert length(L1.Vext[d]) == length(L2.Vint[d]) "Lattices cannot be merged in this direction."
+    L = blockdiag(L1.L,L2.L)
+    for i in 1:length(L1.Vext[d])
+        add_edge!(L,Edge(L1.Vext[d][i],nv(L1)+L2.Vint[d][i]))
+    end
+    shape = collect(L1.shape);
+    shape[d] += L2.shape[d]
+    d⊥ = [_d for _d in 1:N if _d!= d]
+    Vint = collect(L1.Vint)
+    Vext = [nv(L1) .+ vs for vs in L2.Vext]
+    for _d in d⊥
+        Vint[_d] = [L1.Vint[_d]; nv(L1) .+ L2.Vint[_d]]
+        Vext[_d] = [L1.Vext[_d]; nv(L1) .+ L2.Vext[_d]]
+    end
+    ZnLattice{N}(L,Tuple(shape),Tuple(Vint),Tuple(Vext))
 end
 
 """
@@ -161,3 +207,39 @@ function System(lat::L,H::O1,lHt::O2,J::Vector{O3}) where {N,L<:Lattice,LB<:Basi
 
     return System{L,B,O1,eltype(Httop),O3}(lat,gbasis,H,Httop,Htbottom,Htleft,Htright,J)
 end
+
+struct ZnSystem{N,L<:ZnLattice{N},B<:Basis,
+                O1<:AbstractOperator{B,B},O2<:AbstractOperator{B,B},
+                O3<:AbstractOperator{B,B}} <: AbstractSystem
+    # Lattice
+    lattice::L
+    # Bases
+    gbasis::B
+    # Operators
+    H::O1
+    Htint::Tuple{Vararg{Vector{O2},N}}
+    Htext::Tuple{Vararg{Vector{O2},N}}
+    J::Vector{O3}
+end
+
+function ZnSystem(lat::ZnLattice{M},H::O1,lHt::O2,J::Vector{O3}) where {M,N,L<:Lattice,LB<:Basis,
+                                                       B<:CompositeBasis{Tuple{Vararg{LB,N}}},
+                                                       O1<:AbstractOperator{B,B},
+                                                       O2<:AbstractOperator{LB,LB},
+                                                       O3<:AbstractOperator{B,B}}
+    gbasis = H.basis_l;
+    @assert nv(lat) == length(gbasis.bases)
+    @assert lHt.basis_l == first(gbasis.bases)
+    @assert H.basis_r == H.basis_l == gbasis
+    @assert first(J).basis_l == gbasis
+    @assert first(J).basis_r == gbasis
+    Htint = Tuple([[embed(gbasis,v,lHt) for v in lat.Vint[d]] for d in 1:M])
+    Htext = Tuple([[embed(gbasis,v,lHt) for v in lat.Vext[d]] for d in 1:M])
+
+    return ZnSystem{M,ZnLattice{M},B,O1,eltype(first(Htint)),O3}(lat,gbasis,H,Htint,Htext,J)
+end
+
+GraphPlot.gplot(s::AbstractSystem; kwargs...) = GraphPlot.gplot(s.lattice.L; kwargs...)
+GraphPlot.gplot(s::AbstractSystem, locs_x_in::Vector{R}, locs_y_in::Vector{R}; kwargs...) where R<:Real = GraphPlot.gplot(s.lattice.L, locs_x_in, locs_y_in; kwargs...)
+plot_system(s::AbstractSystem; kwargs...) = GraphPlot.gplot(s.lattice.L; kwargs...)
+plot_system(s::AbstractSystem, locs_x_in::Vector{R}, locs_y_in::Vector{R}; kwargs...) where R<:Real = GraphPlot.gplot(s.lattice.L, locs_x_in, locs_y_in; kwargs...)
