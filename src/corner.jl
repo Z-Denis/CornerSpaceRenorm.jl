@@ -184,8 +184,9 @@ Merge two `System`s along some compatible dimension with corner compression.
 * `s2`: `System`.
 * `ρ1`: state of the system `s1`.
 * `ρ2`: state of the system `s2`.
+* `M`: corner dimension.
 """
-function merge(s1::AbstractSystem,s2::AbstractSystem,ρ1::DenseOperator{B1,B1},ρ2::DenseOperator{B2,B2},M::Int) where {B1<:Basis,B2<:Basis}
+function Base.merge(s1::AbstractSystem,s2::AbstractSystem,ρ1::DenseOperator{B1,B1},ρ2::DenseOperator{B2,B2},M::Int) where {B1<:Basis,B2<:Basis}
     # TO DO: add tests on M
     if s1.lattice.ny == s2.lattice.ny
         return vmerge(s1,s2,ρ1,ρ2,M)
@@ -205,6 +206,7 @@ Merge two `System`s vertically along some compatible dimension with corner compr
 * `s2`: `System`.
 * `ρ1`: state of the system `s1`.
 * `ρ2`: state of the system `s2`.
+* `M`: corner dimension.
 """
 function vmerge(s1::AbstractSystem,s2::AbstractSystem,ρ1::DenseOperator{B1,B1},ρ2::DenseOperator{B2,B2},M::Int) where {B1<:Basis,B2<:Basis}
     # TO DO: tests
@@ -251,6 +253,7 @@ Merge two `System`s horizontally along some compatible dimension with corner com
 * `s2`: `System`.
 * `ρ1`: state of the system `s1`.
 * `ρ2`: state of the system `s2`.
+* `M`: corner dimension.
 """
 function hmerge(s1::AbstractSystem,s2::AbstractSystem,ρ1::DenseOperator{B1,B1},ρ2::DenseOperator{B2,B2},M::Int) where {B1<:Basis,B2<:Basis}
     # TO DO: tests
@@ -287,7 +290,19 @@ function hmerge(s1::AbstractSystem,s2::AbstractSystem,ρ1::DenseOperator{B1,B1},
     return System{typeof(lattice),typeof(gbasis),typeof(H),eltype(Httop),eltype(J)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J)
 end
 
-function merge(s1::ZnSystem{N},s2::ZnSystem{N},d::Integer,ρ1::DenseOperator{B1,B1},ρ2::DenseOperator{B2,B2},M::Int) where {N,B1<:Basis,B2<:Basis}
+"""
+    merge(s1, s2, d, ρ1, ρ2, M)
+
+Merge two `ZnSystem`s along the `d`-th direction with corner compression.
+# Arguments
+* `s1`: `ZnSystem`.
+* `s2`: `ZnSystem`.
+* `d`: merging direction.
+* `ρ1`: state of the system `s1`.
+* `ρ2`: state of the system `s2`.
+* `M`: corner dimension.
+"""
+function Base.merge(s1::ZnSystem{N},s2::ZnSystem{N},d::Integer,ρ1::DenseOperator{B1,B1},ρ2::DenseOperator{B2,B2},M::Int) where {N,B1<:Basis,B2<:Basis}
     # TO DO: tests
     lattice = union(s1.lattice,s2.lattice,d)
 

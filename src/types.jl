@@ -44,6 +44,11 @@ function SquareLattice(nx::Integer,ny::Integer;periodic::Bool = false)
     return SquareLattice(L,nx,ny,Vtop,Vbottom,Vleft,Vright)
 end
 
+"""
+    ZnLattice{N} <: Lattice
+
+Z^`N` lattice type. Generic lattice with `N` directions.
+"""
 struct ZnLattice{N} <: Lattice
     L::SimpleGraph{Int64}
     shape::Tuple{Vararg{Int,N}}
@@ -52,6 +57,14 @@ struct ZnLattice{N} <: Lattice
     Vext::Tuple{Vararg{Vector{Int64},N}}
 end
 
+"""
+    ZnLattice(shape; periodic = false)
+
+Construct an `N`-dimensional cubic lattice of type `ZnLattice{N}`.
+
+# Arguments
+* `shape`: Tuple of sizes of all dimensions `(nx, ny, ...)`.
+"""
 function ZnLattice(shape::Tuple{Vararg{Int,N}};periodic::Bool = false) where N
     @assert N > 0 "The lattice must be positive-dimensional."
     if N == 1
@@ -132,6 +145,11 @@ function hunion(L1::SquareLattice,L2::SquareLattice)
                                              L1.Vleft, nv(L1).+L2.Vright)
 end
 
+"""
+    union(L1, L2, d)
+
+Merge two `ZnLattice{N}`s along the `d`-th dimension.
+"""
 function Base.union(L1::ZnLattice{N},L2::ZnLattice{N},d::Integer) where N
     @assert d <= N "Merging direction should be smaller than that of the lattices."
     @assert length(L1.Vext[d]) == length(L2.Vint[d]) "Lattices cannot be merged in this direction."
@@ -184,7 +202,7 @@ end
 
 Construct a `System` from a `Lattice` and operators defining the model.
 # Arguments
-* `lat`: Lattice.
+* `lat`: `Lattice`.
 * `H`: Hamiltonian of the full system.
 * `lHt`: local tunneling operator.
 * `J`: jump operators of the full system.
@@ -208,6 +226,11 @@ function System(lat::L,H::O1,lHt::O2,J::Vector{O3}) where {N,L<:Lattice,LB<:Basi
     return System{L,B,O1,eltype(Httop),O3}(lat,gbasis,H,Httop,Htbottom,Htleft,Htright,J)
 end
 
+"""
+    ZnSystem <: AbstractSystem
+
+Quantum dissipative system defined on a `ZnLattice`.
+"""
 struct ZnSystem{N,L<:ZnLattice{N},B<:Basis,
                 O1<:AbstractOperator{B,B},O2<:AbstractOperator{B,B},
                 O3<:AbstractOperator{B,B}} <: AbstractSystem
@@ -222,6 +245,16 @@ struct ZnSystem{N,L<:ZnLattice{N},B<:Basis,
     J::Vector{O3}
 end
 
+"""
+    ZnSystem(lat, H, lHt, J)
+
+Construct a `ZnSystem` from a `ZnLattice` and operators defining the model.
+# Arguments
+* `lat`: `ZnLattice`.
+* `H`: Hamiltonian of the full system.
+* `lHt`: local tunneling operator.
+* `J`: jump operators of the full system.
+"""
 function ZnSystem(lat::ZnLattice{M},H::O1,lHt::O2,J::Vector{O3}) where {M,N,L<:Lattice,LB<:Basis,
                                                        B<:CompositeBasis{Tuple{Vararg{LB,N}}},
                                                        O1<:AbstractOperator{B,B},
@@ -241,5 +274,21 @@ end
 
 GraphPlot.gplot(s::AbstractSystem; kwargs...) = GraphPlot.gplot(s.lattice.L; kwargs...)
 GraphPlot.gplot(s::AbstractSystem, locs_x_in::Vector{R}, locs_y_in::Vector{R}; kwargs...) where R<:Real = GraphPlot.gplot(s.lattice.L, locs_x_in, locs_y_in; kwargs...)
+
+"""
+    plot_system(s; kwargs...)
+
+Plot the lattice on which `s` is supported, equivalent to `GraphPlot.gplot(s.lattice.L; kwargs...)`.
+# Arguments
+See documentation of [`GraphPlot.gplot`](@ref).
+"""
 plot_system(s::AbstractSystem; kwargs...) = GraphPlot.gplot(s.lattice.L; kwargs...)
+
+"""
+    plot_system(s, locs_x_in, locs_y_in; kwargs...)
+
+Equivalent to `GraphPlot.gplot(s.lattice.L, locs_x_in, locs_y_in; kwargs...)`.
+# Arguments
+See documentation of [`GraphPlot.gplot`](@ref).
+"""
 plot_system(s::AbstractSystem, locs_x_in::Vector{R}, locs_y_in::Vector{R}; kwargs...) where R<:Real = GraphPlot.gplot(s.lattice.L, locs_x_in, locs_y_in; kwargs...)

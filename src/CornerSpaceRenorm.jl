@@ -8,5 +8,5 @@ export AbstractSystem, System, ZnSystem
 include("operators.jl");
 export hamiltonian, dissipators
 include("corner.jl")
-export corner_subspace, cornerize, merge, vmerge, hmerge
+export corner_subspace, cornerize, vmerge, hmerge
 end # module

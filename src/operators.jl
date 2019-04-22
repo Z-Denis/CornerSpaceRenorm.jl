@@ -23,7 +23,7 @@ function hamiltonian(L::Lattice, lH::AbstractOperator{B,B}, tH::Vector{Tuple{Var
     end
     H.data .= H.data + H.data';
     @inbounds for v in vertices(L)
-        H.data .+= embed(gbasis, [v], [lH]).data;
+        H.data .+= embed(gbasis, v, lH).data;
     end
     return H;
 end
@@ -40,7 +40,7 @@ Construct the jump operators of a system from a `Lattice` and local jump operato
 """
 function dissipators(L::Lattice, J::Vector{O}) where {B<:Basis,O<:AbstractOperator{B,B}}
     gbasis = CompositeBasis([first(J).basis_l for i in 1:nv(L)]...);
-    return Base.union([[embed(gbasis, [v], [J[i]]) for i in 1:length(J)] for v in vertices(L)]...)
+    return Base.union([[embed(gbasis, v, J[i]) for i in 1:length(J)] for v in vertices(L)]...)
 end
 
 #dissipators(s::System) = dissipators(s.lattice, s.J)
