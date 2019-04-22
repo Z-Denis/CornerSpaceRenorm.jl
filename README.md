@@ -3,7 +3,7 @@
 [![Build Status](https://travis-ci.com/Z-Denis/CornerSpaceRenorm.jl.svg?token=XuYcpCDomapYmd2vHj9y&branch=master)](https://travis-ci.com/Z-Denis/CornerSpaceRenorm.jl)
 [![codecov](https://codecov.io/gh/Z-Denis/CornerSpaceRenorm.jl/branch/master/graph/badge.svg?token=EwifsJO3ew)](https://codecov.io/gh/Z-Denis/CornerSpaceRenorm.jl)
 
-Skeleton of what could be a Julia package for performing corner space renormalisation.
+Skeleton of what could be a Julia package for performing corner space renormalization.
 
 ## Examples
 ```julia
@@ -56,3 +56,44 @@ Doubling the corner dimension from `100` to `200` yields
 julia> Purity = 0.9937208692824874
 julia> #states = 1.0366056109469342
 ```
+A corner dimension of `500` yields
+```julia-repl
+julia> Purity = 0.9939700852528554
+julia> #states = 1.0368529902181345
+```
+that is, from `200` to `500` the relative variation of the entropy is `0.66%` so
+that we do not increase significantly our knowledge about the steady state by
+going to higher corner dimensions, i.e. the corner has reached convergence.
+
+## More generic Lattices
+
+More generic lattices with an arbitrary number of directions `N` along which they
+can be appended are implemented via the type `ZnLattice{N}`. Its constructor
+interface `ZnSystem(lat, H, lHt, J)` builds by default an `N`-dimensional cubic
+lattice, however it is possible to define more generic unit cells by directly
+using the default constructor. For instance, a Lieb lattice can be built as a
+two-dimensional `ZnLattice` starting from a 3-vertex path graph and specifying
+custom input and output vertices for each merging direction:
+```julia
+g = PathGraph(3)
+L = ZnLattice{2}(g,(2,2),([2],[2]),([3],[1]))
+```
+Here `g` is a L shaped unit cell with vertices `1` (North), `2` (center) and `3`
+(East). `(2, 2)` is a `2-Tuple` indicating that we embed this unit into a `2x2`
+unit cell. `([2],[2])` (resp. `([3],[1])`) declares the input (resp. output)
+vertices for the first and second dimension, i.e. if we append two such lattices
+`L1` and `L2` along the dimension `1`, the merging would be operated by connecting
+the output vertex `3` of `L1` to the input vertex `2` of `L2`. In this way, if we
+would like to start the renormalization procedure from, e.g., a `2x2` Lieb lattice
+(12 vertices), we can just double `L` once along both directions:
+```julia
+L = union(L,L,1)
+L = union(L,L,2)
+```
+Given the operators of the `SquareLattice` example, we can then build a `ZnSystem`
+from it by simply using `ZnSystem(L,H,destroy(lb),J)`.
+
+## Plotting
+
+Methods for `Lattice` and `AbstractSystem` are added to function `GraphPlot.gplot`
+of the package [GraphPlot.jl](https://github.com/JuliaGraphs/GraphPlot.jl).
