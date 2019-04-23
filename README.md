@@ -5,6 +5,12 @@
 
 Skeleton of what could be a Julia package for performing corner space renormalization.
 
+## Installation
+From the Pkg REPL (prefix `]`), type:
+```julia-repl
+(v1.1) pkg> add https://github.com/Z-Denis/CornerSpaceRenorm.jl
+```
+
 ## Examples
 ```julia
 using CornerSpaceRenorm, QuantumOptics
