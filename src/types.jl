@@ -183,7 +183,7 @@ Quantum dissipative system defined on a square lattice.
 """
 struct System{L<:Lattice,B<:Basis,
               O1<:AbstractOperator{B,B},O2<:AbstractOperator{B,B},
-              O3<:AbstractOperator{B,B}} <: AbstractSystem
+              O3<:AbstractOperator{B,B},O4<:AbstractOperator{B,B}} <: AbstractSystem
     # Lattice
     lattice::L
     # Bases
@@ -195,6 +195,7 @@ struct System{L<:Lattice,B<:Basis,
     Htleft::Vector{O2}
     Htright::Vector{O2}
     J::Vector{O3}
+    observables::Vector{Dict{String,O4}}
 end
 
 """
@@ -207,23 +208,28 @@ Construct a `System` from a `Lattice` and operators defining the model.
 * `lHt`: local tunneling operator.
 * `J`: jump operators of the full system.
 """
-function System(lat::L,H::O1,lHt::O2,J::Vector{O3}) where {N,L<:Lattice,LB<:Basis,
+function System(lat::L,H::O1,lHt::O2,J::Vector{O3},obs::Union{Vector{Dict{String,O4}},Missing}=missing) where {N,L<:Lattice,LB<:Basis,
                                                        B<:CompositeBasis{Tuple{Vararg{LB,N}}},
                                                        O1<:AbstractOperator{B,B},
                                                        O2<:AbstractOperator{LB,LB},
-                                                       O3<:AbstractOperator{B,B}}
+                                                       O3<:AbstractOperator{B,B},
+                                                       O4<:AbstractOperator{B,B}}
     gbasis = H.basis_l;
     @assert nv(lat) == length(gbasis.bases)
     @assert lHt.basis_l == first(gbasis.bases)
     @assert H.basis_r == H.basis_l == gbasis
     @assert first(J).basis_l == gbasis
     @assert first(J).basis_r == gbasis
+    @assert ismissing(obs) || length(obs) == nv(lat)
     Httop    = [embed(gbasis,[i],[lHt]) for i in lat.Vtop]
     Htbottom = [embed(gbasis,[i],[lHt]) for i in lat.Vbottom]
     Htleft   = [embed(gbasis,[i],[lHt]) for i in lat.Vleft]
     Htright  = [embed(gbasis,[i],[lHt]) for i in lat.Vright]
-
-    return System{L,B,O1,eltype(Httop),O3}(lat,gbasis,H,Httop,Htbottom,Htleft,Htright,J)
+    if ismissing(obs)
+        return System{L,B,O1,eltype(Httop),O3,typeof(H)}(lat,gbasis,H,Httop,Htbottom,Htleft,Htright,J,[Dict{String,typeof(H)}() for i in 1:nv(lat)])
+    else
+        return System{L,B,O1,eltype(Httop),O3,O4}(lat,gbasis,H,Httop,Htbottom,Htleft,Htright,J,obs)
+    end
 end
 
 """

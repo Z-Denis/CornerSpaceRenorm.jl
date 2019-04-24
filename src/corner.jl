@@ -241,7 +241,21 @@ function vmerge(s1::AbstractSystem,s2::AbstractSystem,ρ1::DenseOperator{B1,B1},
     Htleft = [𝒫1(s1.Htleft[i]) for i in 1:length(s1.Htleft)] ∪ [𝒫2(s2.Htleft[i]) for i in 1:length(s2.Htleft)];
     Htright = [𝒫1(s1.Htright[i]) for i in 1:length(s1.Htright)] ∪ [𝒫2(s2.Htright[i]) for i in 1:length(s2.Htright)];
 
-    return System{typeof(lattice),typeof(gbasis),typeof(H),eltype(Httop),eltype(J)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J)
+    # Test that observable types are compatible
+    obs = [[Dict{String,typeof(H)}() for i in 1:nv(s1.lattice)]; [Dict{String,typeof(H)}() for i in 1:nv(s2.lattice)]]
+
+    for i in 1:length(s1.observables)
+        for k in keys(s1.observables[i])
+            obs[i][k] = 𝒫1(s1.observables[i][k])
+        end
+    end
+    for i in 1:length(s2.observables)
+        for k in keys(s2.observables[i])
+            obs[length(s1.observables)+i][k] = 𝒫2(s2.observables[i][k])
+        end
+    end
+
+    return System{typeof(lattice),typeof(gbasis),typeof(H),eltype(Httop),eltype(J),typeof(H)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J,obs)
 end
 
 """
