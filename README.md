@@ -49,7 +49,7 @@ s3 = hmerge(s2,s2,ρ2,ρ2,100) # 4 x 4 lattice
 s4 = vmerge(s3,s3,ρ3,ρ3,100) # 8 x 4 lattice
 ρ4 = steadystate.master(s4.H,s4.J)[2][end]
 # etc.
-s5 = hmerge(s4c,s4c,ρ4,ρ4,100) # 8 x 8 lattice
+s5 = hmerge(s4,s4,ρ4,ρ4,100) # 8 x 8 lattice
 ρ5 = steadystate.master(s5.H,s5.J)[2][end]
 println("Purity = ",real(tr(ρ5*ρ5)),"\n#states = ", real(exp(entropy_vn(ρ5))))
 ```
