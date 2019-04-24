@@ -8,7 +8,7 @@ Skeleton of what could be a Julia package for performing corner space renormaliz
 ## Installation
 From the Pkg REPL (prefix `]`), type:
 ```julia-repl
-(v1.1) pkg> add https://github.com/Z-Denis/CornerSpaceRenorm.jl
+(v1.1) pkg> add https://github.com/TheorieMPQ/CornerSpaceRenorm.jl
 ```
 
 ## Examples
