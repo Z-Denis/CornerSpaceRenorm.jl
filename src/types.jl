@@ -239,7 +239,7 @@ Quantum dissipative system defined on a `ZnLattice`.
 """
 struct ZnSystem{N,L<:ZnLattice{N},B<:Basis,
                 O1<:AbstractOperator{B,B},O2<:AbstractOperator{B,B},
-                O3<:AbstractOperator{B,B}} <: AbstractSystem
+                O3<:AbstractOperator{B,B},O4<:AbstractOperator{B,B}} <: AbstractSystem
     # Lattice
     lattice::L
     # Bases
@@ -249,10 +249,11 @@ struct ZnSystem{N,L<:ZnLattice{N},B<:Basis,
     Htint::Tuple{Vararg{Vector{O2},N}}
     Htext::Tuple{Vararg{Vector{O2},N}}
     J::Vector{O3}
+    observables::Vector{Dict{String,O4}}
 end
 
 """
-    ZnSystem(lat, H, lHt, J)
+    ZnSystem(lat, H, lHt, J, obs)
 
 Construct a `ZnSystem` from a `ZnLattice` and operators defining the model.
 # Arguments
@@ -260,12 +261,17 @@ Construct a `ZnSystem` from a `ZnLattice` and operators defining the model.
 * `H`: Hamiltonian of the full system.
 * `lHt`: local tunneling operator.
 * `J`: jump operators of the full system.
+* `obs`: Observables to be transformed to the corner space together with the
+Liouvillian. Can be a `Dict{String,<local operator type>}` of local operators or
+an array of `nv(lat)` `Dict{String,<global operator type>}`s of operators in the
+global basis.
 """
-function ZnSystem(lat::ZnLattice{M},H::O1,lHt::O2,J::Vector{O3}) where {M,N,L<:Lattice,LB<:Basis,
+function ZnSystem(lat::ZnLattice{M},H::O1,lHt::O2,J::Vector{O3},obs::Union{Vector{Dict{String,O4}},Missing}=missing) where {M,N,L<:Lattice,LB<:Basis,
                                                        B<:CompositeBasis{Tuple{Vararg{LB,N}}},
                                                        O1<:AbstractOperator{B,B},
                                                        O2<:AbstractOperator{LB,LB},
-                                                       O3<:AbstractOperator{B,B}}
+                                                       O3<:AbstractOperator{B,B},
+                                                       O4<:AbstractOperator{B,B}}
     gbasis = H.basis_l;
     @assert nv(lat) == length(gbasis.bases)
     @assert lHt.basis_l == first(gbasis.bases)
@@ -275,7 +281,22 @@ function ZnSystem(lat::ZnLattice{M},H::O1,lHt::O2,J::Vector{O3}) where {M,N,L<:L
     Htint = Tuple([[embed(gbasis,v,lHt) for v in lat.Vint[d]] for d in 1:M])
     Htext = Tuple([[embed(gbasis,v,lHt) for v in lat.Vext[d]] for d in 1:M])
 
-    return ZnSystem{M,ZnLattice{M},B,O1,eltype(first(Htint)),O3}(lat,gbasis,H,Htint,Htext,J)
+    if ismissing(obs)
+        return ZnSystem{M,ZnLattice{M},B,O1,eltype(first(Htint)),O3,typeof(H)}(lat,gbasis,H,Htint,Htext,J,[Dict{String,typeof(H)}() for i in 1:nv(lat)])
+    else
+        return ZnSystem{M,ZnLattice{M},B,O1,eltype(first(Htint)),O3,O4}(lat,gbasis,H,Htint,Htext,J,obs)
+    end
+end
+
+function ZnSystem(lat::ZnLattice{M},H::O1,lHt::O2,J::Vector{O3},lobs::Dict{String,O4}) where {M,N,L<:Lattice,LB<:Basis,
+                                                       B<:CompositeBasis{Tuple{Vararg{LB,N}}},
+                                                       O1<:AbstractOperator{B,B},
+                                                       O2<:AbstractOperator{LB,LB},
+                                                       O3<:AbstractOperator{B,B},
+                                                       O4<:AbstractOperator{LB,LB}}
+    gbasis = H.basis_l;
+    obs = [Dict([name => embed(gbasis,i,lop) for (name,lop) in lobs]) for i in 1:nv(lat)]
+    return ZnSystem(lat,H,lHt,J,obs)
 end
 
 GraphPlot.gplot(s::AbstractSystem; kwargs...) = GraphPlot.gplot(s.lattice.L; kwargs...)
