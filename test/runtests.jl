@@ -1,4 +1,5 @@
 using CornerSpaceRenorm, QuantumOptics
+using LinearAlgebra
 using Test
 
 @testset "CornerSpaceRenorm.jl" begin
@@ -79,4 +80,10 @@ using Test
     ρ3 = steadystate.master(s3.H,s3.J)[2][end]
     ρ2 = steadystate.master(s2.H,s2.J)[2][end]
     @test fidelity(ρ3,ρ2) ≈ 1.
+
+    # Test hermitianize!
+    O = randoperator(GenericBasis(300))
+    CornerSpaceRenorm.hermitianize!(O)
+    @test ishermitian(O.data)
+
 end

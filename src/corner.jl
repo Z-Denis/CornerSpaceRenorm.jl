@@ -84,7 +84,8 @@ function cornerize(s::AbstractSystem,cspace::SubspaceBasis)
     Htleft = proj.(s.Htleft);
     Htright = proj.(s.Htright);
     J = proj.(s.J);
-    return System{typeof(s.lattice),typeof(cspace),typeof(H),eltype(Httop),eltype(J)}(s.lattice,cspace,H,Httop,Htbottom,Htleft,Htright,J)
+    obs = [Dict([name => proj(lop) for (name,lop) in s.observables[i]]) for i in 1:nv(s.lattice)]
+    return System{typeof(s.lattice),typeof(cspace),typeof(H),eltype(Httop),eltype(J),typeof(H)}(s.lattice,cspace,H,Httop,Htbottom,Htleft,Htright,J,obs)
 end
 
 """
@@ -131,7 +132,20 @@ function vmerge(s1::AbstractSystem,s2::AbstractSystem)
     Htleft = [s1.Htleft[i] ⊗ Id2 for i in 1:length(s1.Htleft)] ∪ [Id1 ⊗ s2.Htleft[i] for i in 1:length(s2.Htleft)]
     Htright = [s1.Htright[i] ⊗ Id2 for i in 1:length(s1.Htright)] ∪ [Id1 ⊗ s2.Htright[i] for i in 1:length(s2.Htright)]
 
-    return System{typeof(lattice),typeof(gbasis),typeof(H),eltype(Httop),eltype(J)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J)
+    # TO DO: Test that observable types are compatible
+    obs = [[Dict{String,typeof(H)}() for i in 1:nv(s1.lattice)]; [Dict{String,typeof(H)}() for i in 1:nv(s2.lattice)]]
+
+    for i in 1:length(s1.observables)
+        for k in keys(s1.observables[i])
+            obs[i][k] = s1.observables[i][k] ⊗ Id2
+        end
+    end
+    for i in 1:length(s2.observables)
+        for k in keys(s2.observables[i])
+            obs[length(s1.observables)+i][k] = Id1 ⊗ s2.observables[i][k]
+        end
+    end
+    return System{typeof(lattice),typeof(gbasis),typeof(H),eltype(Httop),eltype(J),typeof(H)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J,obs)
 end
 
 """
@@ -160,7 +174,20 @@ function hmerge(s1::AbstractSystem,s2::AbstractSystem)
     Htleft = [s1.Htleft[i] ⊗ Id2 for i in 1:length(s1.Htleft)]
     Htright = [Id1 ⊗ s2.Htright[i] for i in 1:length(s2.Htright)]
 
-    return System{typeof(lattice),typeof(gbasis),typeof(H),eltype(Httop),eltype(J)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J)
+    # TO DO: Test that observable types are compatible
+    obs = [[Dict{String,typeof(H)}() for i in 1:nv(s1.lattice)]; [Dict{String,typeof(H)}() for i in 1:nv(s2.lattice)]]
+
+    for i in 1:length(s1.observables)
+        for k in keys(s1.observables[i])
+            obs[i][k] = s1.observables[i][k] ⊗ Id2
+        end
+    end
+    for i in 1:length(s2.observables)
+        for k in keys(s2.observables[i])
+            obs[length(s1.observables)+i][k] = Id1 ⊗ s2.observables[i][k]
+        end
+    end
+    return System{typeof(lattice),typeof(gbasis),typeof(H),eltype(Httop),eltype(J),typeof(H)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J,obs)
 end
 
 """
@@ -171,7 +198,11 @@ Extract the Hermitian part of `x`.
 * `x`: some operator.
 """
 function hermitianize!(x::AbstractOperator{B,B}) where {B<:Basis}
-    x.data .= (x.data .+ x.data')./2.;
+    n = LinearAlgebra.checksquare(x.data);
+    @inbounds for j = 1:n, i = 1:j
+        x.data[i,j] = (x.data[i,j] + conj(x.data[j,i])) / 2
+        x.data[j,i] = conj(x.data[i,j]);
+    end
     nothing
 end
 
@@ -241,7 +272,21 @@ function vmerge(s1::AbstractSystem,s2::AbstractSystem,ρ1::DenseOperator{B1,B1},
     Htleft = [𝒫1(s1.Htleft[i]) for i in 1:length(s1.Htleft)] ∪ [𝒫2(s2.Htleft[i]) for i in 1:length(s2.Htleft)];
     Htright = [𝒫1(s1.Htright[i]) for i in 1:length(s1.Htright)] ∪ [𝒫2(s2.Htright[i]) for i in 1:length(s2.Htright)];
 
-    return System{typeof(lattice),typeof(gbasis),typeof(H),eltype(Httop),eltype(J)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J)
+    # TO DO: Test that observable types are compatible
+    obs = [[Dict{String,typeof(H)}() for i in 1:nv(s1.lattice)]; [Dict{String,typeof(H)}() for i in 1:nv(s2.lattice)]]
+
+    for i in 1:length(s1.observables)
+        for k in keys(s1.observables[i])
+            obs[i][k] = 𝒫1(s1.observables[i][k])
+        end
+    end
+    for i in 1:length(s2.observables)
+        for k in keys(s2.observables[i])
+            obs[length(s1.observables)+i][k] = 𝒫2(s2.observables[i][k])
+        end
+    end
+
+    return System{typeof(lattice),typeof(gbasis),typeof(H),eltype(Httop),eltype(J),typeof(H)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J,obs)
 end
 
 """
@@ -287,7 +332,21 @@ function hmerge(s1::AbstractSystem,s2::AbstractSystem,ρ1::DenseOperator{B1,B1},
     Htleft = [𝒫1(s1.Htleft[i]) for i in 1:length(s1.Htleft)];
     Htright = [𝒫2(s2.Htright[i]) for i in 1:length(s2.Htright)];
 
-    return System{typeof(lattice),typeof(gbasis),typeof(H),eltype(Httop),eltype(J)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J)
+    # TO DO: Test that observable types are compatible
+    obs = [[Dict{String,typeof(H)}() for i in 1:nv(s1.lattice)]; [Dict{String,typeof(H)}() for i in 1:nv(s2.lattice)]]
+
+    for i in 1:length(s1.observables)
+        for k in keys(s1.observables[i])
+            obs[i][k] = 𝒫1(s1.observables[i][k])
+        end
+    end
+    for i in 1:length(s2.observables)
+        for k in keys(s2.observables[i])
+            obs[length(s1.observables)+i][k] = 𝒫2(s2.observables[i][k])
+        end
+    end
+
+    return System{typeof(lattice),typeof(gbasis),typeof(H),eltype(Httop),eltype(J),typeof(H)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J,obs)
 end
 
 """
@@ -343,5 +402,19 @@ function Base.merge(s1::ZnSystem{N},s2::ZnSystem{N},d::Integer,ρ1::DenseOperato
         Htext[_d] = [𝒫1.(s1.Htext[_d]); 𝒫2.(s2.Htext[_d])]
     end
 
-    return ZnSystem{N,typeof(lattice),typeof(gbasis),typeof(H),eltype(first(Htint)),eltype(J)}(lattice,gbasis,H,Tuple(Htint),Tuple(Htext),J)
+    # TO DO: Test that observable types are compatible
+    obs = [[Dict{String,typeof(H)}() for i in 1:nv(s1.lattice)]; [Dict{String,typeof(H)}() for i in 1:nv(s2.lattice)]]
+
+    for i in 1:length(s1.observables)
+        for k in keys(s1.observables[i])
+            obs[i][k] = 𝒫1(s1.observables[i][k])
+        end
+    end
+    for i in 1:length(s2.observables)
+        for k in keys(s2.observables[i])
+            obs[length(s1.observables)+i][k] = 𝒫2(s2.observables[i][k])
+        end
+    end
+
+    return ZnSystem{N,typeof(lattice),typeof(gbasis),typeof(H),eltype(first(Htint)),eltype(J),typeof(H)}(lattice,gbasis,H,Tuple(Htint),Tuple(Htext),J,obs)
 end
