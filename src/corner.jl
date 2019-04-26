@@ -198,7 +198,11 @@ Extract the Hermitian part of `x`.
 * `x`: some operator.
 """
 function hermitianize!(x::AbstractOperator{B,B}) where {B<:Basis}
-    x.data .= (x.data .+ x.data')./2.;
+    n = LinearAlgebra.checksquare(x.data);
+    @inbounds for j = 2:n, i = 1:j-1
+        x.data[i,j] = (x.data[i,j] + conj(x.data[j,i])) / 2
+        x.data[j,i] = conj(x.data[i,j]);
+    end
     nothing
 end
 
