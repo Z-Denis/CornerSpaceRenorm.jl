@@ -85,5 +85,4 @@ using Test
     O = randoperator(GenericBasis(300))
     CornerSpaceRenorm.hermitianize!(O)
     @test ishermitian(O.data)
-
 end

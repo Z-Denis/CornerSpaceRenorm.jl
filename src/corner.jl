@@ -244,16 +244,21 @@ function vmerge(s1::AbstractSystem,s2::AbstractSystem,ρ1::DenseOperator{B1,B1},
     lattice = vunion(s1.lattice,s2.lattice)
 
     bC, handles, ϕs_1, ϕs_2 = corner_subspace(ρ1,ρ2,M)
+    vt_1 = map(x->transpose(x.data), ϕs_1)
+    vc_1 = map(x->conj(x.data), ϕs_1)
+    vt_2 = map(x->transpose(x.data), ϕs_2)
+    vc_2 = map(x->conj(x.data), ϕs_2)
+
     function 𝒫1(op)
         # TO DO: take advantage of orthogonormality to get rid of the scalar product on subspace 2
-        return DenseOperator(bC,[transpose(ϕs_1[hi[1]].data) * (op * conj.(ϕs_1[hj[1]])).data * (transpose(ϕs_2[hi[2]].data) * conj.(ϕs_2[hj[2]]).data) for hi in handles, hj in handles])
+        return DenseOperator(bC,[vt_1[hi[1]] * (op.data * vc_1[hj[1]]) * (vt_2[hi[2]]*vc_2[hj[2]]) for hi in handles, hj in handles])
     end
     function 𝒫2(op)
         # TO DO: take advantage of orthogonormality to get rid of the scalar product on subspace 1
-        return DenseOperator(bC,[transpose(ϕs_2[hi[2]].data) * (op * conj.(ϕs_2[hj[2]])).data * (transpose(ϕs_1[hi[1]].data) * conj.(ϕs_1[hj[1]]).data) for hi in handles, hj in handles])
+        return DenseOperator(bC,[vt_2[hi[2]] * (op.data * vc_2[hj[2]]) * (vt_1[hi[1]]*vc_1[hj[1]]) for hi in handles, hj in handles])
     end
     function 𝒫(op1,op2)
-        return DenseOperator(bC,[(transpose(ϕs_1[hi[1]].data) * (op1 * conj.(ϕs_1[hj[1]])).data) * (transpose(ϕs_2[hi[2]].data) * (op2 * conj.(ϕs_2[hj[2]])).data) for hi in handles, hj in handles])
+        return DenseOperator(bC,[(vt_1[hi[1]] * (op1.data * vc_1[hj[1]])) * (vt_2[hi[2]] * (op2.data * vc_2[hj[2]])) for hi in handles, hj in handles])
     end
 
     # TO DO: exploit Hermicianity of H to compute half of the matrix elements in the corner
@@ -305,16 +310,21 @@ function hmerge(s1::AbstractSystem,s2::AbstractSystem,ρ1::DenseOperator{B1,B1},
     lattice = hunion(s1.lattice,s2.lattice)
 
     bC, handles, ϕs_1, ϕs_2 = corner_subspace(ρ1,ρ2,M)
+    vt_1 = map(x->transpose(x.data), ϕs_1)
+    vc_1 = map(x->conj(x.data), ϕs_1)
+    vt_2 = map(x->transpose(x.data), ϕs_2)
+    vc_2 = map(x->conj(x.data), ϕs_2)
+
     function 𝒫1(op)
         # TO DO: take advantage of orthogonormality to get rid of the scalar product on subspace 2
-        return DenseOperator(bC,[transpose(ϕs_1[hi[1]].data) * (op * conj.(ϕs_1[hj[1]])).data * (transpose(ϕs_2[hi[2]].data) * conj.(ϕs_2[hj[2]]).data) for hi in handles, hj in handles])
+        return DenseOperator(bC,[vt_1[hi[1]] * (op.data * vc_1[hj[1]]) * (vt_2[hi[2]]*vc_2[hj[2]]) for hi in handles, hj in handles])
     end
     function 𝒫2(op)
         # TO DO: take advantage of orthogonormality to get rid of the scalar product on subspace 1
-        return DenseOperator(bC,[transpose(ϕs_2[hi[2]].data) * (op * conj.(ϕs_2[hj[2]])).data * (transpose(ϕs_1[hi[1]].data) * conj.(ϕs_1[hj[1]]).data) for hi in handles, hj in handles])
+        return DenseOperator(bC,[vt_2[hi[2]] * (op.data * vc_2[hj[2]]) * (vt_1[hi[1]]*vc_1[hj[1]]) for hi in handles, hj in handles])
     end
     function 𝒫(op1,op2)
-        return DenseOperator(bC,[(transpose(ϕs_1[hi[1]].data) * (op1 * conj.(ϕs_1[hj[1]])).data) * (transpose(ϕs_2[hi[2]].data) * (op2 * conj.(ϕs_2[hj[2]])).data) for hi in handles, hj in handles])
+        return DenseOperator(bC,[(vt_1[hi[1]] * (op1.data * vc_1[hj[1]])) * (vt_2[hi[2]] * (op2.data * vc_2[hj[2]])) for hi in handles, hj in handles])
     end
 
     # TO DO: exploit Hermicianity of H to compute half of the matrix elements in the corner
@@ -366,16 +376,21 @@ function Base.merge(s1::ZnSystem{N},s2::ZnSystem{N},d::Integer,ρ1::DenseOperato
     lattice = union(s1.lattice,s2.lattice,d)
 
     bC, handles, ϕs_1, ϕs_2 = corner_subspace(ρ1,ρ2,M)
+    vt_1 = map(x->transpose(x.data), ϕs_1)
+    vc_1 = map(x->conj(x.data), ϕs_1)
+    vt_2 = map(x->transpose(x.data), ϕs_2)
+    vc_2 = map(x->conj(x.data), ϕs_2)
+
     function 𝒫1(op)
         # TO DO: take advantage of orthogonormality to get rid of the scalar product on subspace 2
-        return DenseOperator(bC,[transpose(ϕs_1[hi[1]].data) * (op * conj.(ϕs_1[hj[1]])).data * (transpose(ϕs_2[hi[2]].data) * conj.(ϕs_2[hj[2]]).data) for hi in handles, hj in handles])
+        return DenseOperator(bC,[vt_1[hi[1]] * (op.data * vc_1[hj[1]]) * (vt_2[hi[2]]*vc_2[hj[2]]) for hi in handles, hj in handles])
     end
     function 𝒫2(op)
         # TO DO: take advantage of orthogonormality to get rid of the scalar product on subspace 1
-        return DenseOperator(bC,[transpose(ϕs_2[hi[2]].data) * (op * conj.(ϕs_2[hj[2]])).data * (transpose(ϕs_1[hi[1]].data) * conj.(ϕs_1[hj[1]]).data) for hi in handles, hj in handles])
+        return DenseOperator(bC,[vt_2[hi[2]] * (op.data * vc_2[hj[2]]) * (vt_1[hi[1]]*vc_1[hj[1]]) for hi in handles, hj in handles])
     end
     function 𝒫(op1,op2)
-        return DenseOperator(bC,[(transpose(ϕs_1[hi[1]].data) * (op1 * conj.(ϕs_1[hj[1]])).data) * (transpose(ϕs_2[hi[2]].data) * (op2 * conj.(ϕs_2[hj[2]])).data) for hi in handles, hj in handles])
+        return DenseOperator(bC,[(vt_1[hi[1]] * (op1.data * vc_1[hj[1]])) * (vt_2[hi[2]] * (op2.data * vc_2[hj[2]])) for hi in handles, hj in handles])
     end
 
     # TO DO: exploit Hermicianity of H to compute half of the matrix elements in the corner
