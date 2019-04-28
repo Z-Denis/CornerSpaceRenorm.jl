@@ -256,7 +256,7 @@ function vmerge(s1::AbstractSystem,s2::AbstractSystem,ρ1::DenseOperator{B1,B1},
         opC = DenseOperator(bC)
         Threads.@threads for j in 1:length(handles)
             hj = handles[j]
-            cache1[Threads.threadid()] .= op.data * vc_1[hj[1]]
+            mul!(cache1[Threads.threadid()], op.data, vc_1[hj[1]])
             for i in 1:length(handles)
                 hi = handles[i]
                 opC.data[i,j] = vt_1[hi[1]] * cache1[Threads.threadid()] * (vt_2[hi[2]]*vc_2[hj[2]])
@@ -269,7 +269,7 @@ function vmerge(s1::AbstractSystem,s2::AbstractSystem,ρ1::DenseOperator{B1,B1},
         opC = DenseOperator(bC)
         Threads.@threads for j in 1:length(handles)
             hj = handles[j]
-            cache2[Threads.threadid()] .= op.data * vc_2[hj[2]]
+            mul!(cache2[Threads.threadid()], op.data, vc_2[hj[2]])
             for i in 1:length(handles)
                 hi = handles[i]
                 opC.data[i,j] = vt_2[hi[2]] * cache2[Threads.threadid()] * (vt_1[hi[1]]*vc_1[hj[1]])
@@ -281,8 +281,8 @@ function vmerge(s1::AbstractSystem,s2::AbstractSystem,ρ1::DenseOperator{B1,B1},
         opC = DenseOperator(bC)
         Threads.@threads for j in 1:length(handles)
             hj = handles[j]
-            cache1[Threads.threadid()] .= op1.data * vc_1[hj[1]]
-            cache2[Threads.threadid()] .= op2.data * vc_2[hj[2]]
+            mul!(cache1[Threads.threadid()], op1.data, vc_1[hj[1]])
+            mul!(cache2[Threads.threadid()], op2.data, vc_2[hj[2]])
             for i in 1:length(handles)
                 hi = handles[i]
                 opC.data[i,j] = (vt_1[hi[1]] * cache1[Threads.threadid()]) * (vt_2[hi[2]] * cache2[Threads.threadid()])
@@ -352,7 +352,7 @@ function hmerge(s1::AbstractSystem,s2::AbstractSystem,ρ1::DenseOperator{B1,B1},
         opC = DenseOperator(bC)
         Threads.@threads for j in 1:length(handles)
             hj = handles[j]
-            cache1[Threads.threadid()] .= op.data * vc_1[hj[1]]
+            mul!(cache1[Threads.threadid()], op.data, vc_1[hj[1]])
             for i in 1:length(handles)
                 hi = handles[i]
                 opC.data[i,j] = vt_1[hi[1]] * cache1[Threads.threadid()] * (vt_2[hi[2]]*vc_2[hj[2]])
@@ -365,7 +365,7 @@ function hmerge(s1::AbstractSystem,s2::AbstractSystem,ρ1::DenseOperator{B1,B1},
         opC = DenseOperator(bC)
         Threads.@threads for j in 1:length(handles)
             hj = handles[j]
-            cache2[Threads.threadid()] .= op.data * vc_2[hj[2]]
+            mul!(cache2[Threads.threadid()], op.data, vc_2[hj[2]])
             for i in 1:length(handles)
                 hi = handles[i]
                 opC.data[i,j] = vt_2[hi[2]] * cache2[Threads.threadid()] * (vt_1[hi[1]]*vc_1[hj[1]])
@@ -377,8 +377,8 @@ function hmerge(s1::AbstractSystem,s2::AbstractSystem,ρ1::DenseOperator{B1,B1},
         opC = DenseOperator(bC)
         Threads.@threads for j in 1:length(handles)
             hj = handles[j]
-            cache1[Threads.threadid()] .= op1.data * vc_1[hj[1]]
-            cache2[Threads.threadid()] .= op2.data * vc_2[hj[2]]
+            mul!(cache1[Threads.threadid()], op1.data, vc_1[hj[1]])
+            mul!(cache2[Threads.threadid()], op2.data, vc_2[hj[2]])
             for i in 1:length(handles)
                 hi = handles[i]
                 opC.data[i,j] = (vt_1[hi[1]] * cache1[Threads.threadid()]) * (vt_2[hi[2]] * cache2[Threads.threadid()])
@@ -448,7 +448,7 @@ function Base.merge(s1::ZnSystem{N},s2::ZnSystem{N},d::Integer,ρ1::DenseOperato
         opC = DenseOperator(bC)
         Threads.@threads for j in 1:length(handles)
             hj = handles[j]
-            cache1[Threads.threadid()] .= op.data * vc_1[hj[1]]
+            mul!(cache1[Threads.threadid()], op.data, vc_1[hj[1]])
             for i in 1:length(handles)
                 hi = handles[i]
                 opC.data[i,j] = vt_1[hi[1]] * cache1[Threads.threadid()] * (vt_2[hi[2]]*vc_2[hj[2]])
@@ -461,7 +461,7 @@ function Base.merge(s1::ZnSystem{N},s2::ZnSystem{N},d::Integer,ρ1::DenseOperato
         opC = DenseOperator(bC)
         Threads.@threads for j in 1:length(handles)
             hj = handles[j]
-            cache2[Threads.threadid()] .= op.data * vc_2[hj[2]]
+            mul!(cache2[Threads.threadid()], op.data, vc_2[hj[2]])
             for i in 1:length(handles)
                 hi = handles[i]
                 opC.data[i,j] = vt_2[hi[2]] * cache2[Threads.threadid()] * (vt_1[hi[1]]*vc_1[hj[1]])
@@ -473,8 +473,8 @@ function Base.merge(s1::ZnSystem{N},s2::ZnSystem{N},d::Integer,ρ1::DenseOperato
         opC = DenseOperator(bC)
         Threads.@threads for j in 1:length(handles)
             hj = handles[j]
-            cache1[Threads.threadid()] .= op1.data * vc_1[hj[1]]
-            cache2[Threads.threadid()] .= op2.data * vc_2[hj[2]]
+            mul!(cache1[Threads.threadid()], op1.data, vc_1[hj[1]])
+            mul!(cache2[Threads.threadid()], op2.data, vc_2[hj[2]])
             for i in 1:length(handles)
                 hi = handles[i]
                 opC.data[i,j] = (vt_1[hi[1]] * cache1[Threads.threadid()]) * (vt_2[hi[2]] * cache2[Threads.threadid()])
