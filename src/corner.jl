@@ -251,14 +251,38 @@ function vmerge(s1::AbstractSystem,s2::AbstractSystem,ρ1::DenseOperator{B1,B1},
 
     function 𝒫1(op)
         # TO DO: take advantage of orthogonormality to get rid of the scalar product on subspace 2
-        return DenseOperator(bC,[vt_1[hi[1]] * (op.data * vc_1[hj[1]]) * (vt_2[hi[2]]*vc_2[hj[2]]) for hi in handles, hj in handles])
+        opC = DenseOperator(bC)
+        Threads.@threads for i in 1:length(handles)
+            hi = handles[i]
+            for j in 1:length(handles)
+                hj = handles[j]
+                opC.data[i,j] = vt_1[hi[1]] * (op.data * vc_1[hj[1]]) * (vt_2[hi[2]]*vc_2[hj[2]])
+            end
+        end
+        return opC
     end
     function 𝒫2(op)
         # TO DO: take advantage of orthogonormality to get rid of the scalar product on subspace 1
-        return DenseOperator(bC,[vt_2[hi[2]] * (op.data * vc_2[hj[2]]) * (vt_1[hi[1]]*vc_1[hj[1]]) for hi in handles, hj in handles])
+        opC = DenseOperator(bC)
+        Threads.@threads for i in 1:length(handles)
+            hi = handles[i]
+            for j in 1:length(handles)
+                hj = handles[j]
+                opC.data[i,j] = vt_2[hi[2]] * (op.data * vc_2[hj[2]]) * (vt_1[hi[1]]*vc_1[hj[1]])
+            end
+        end
+        return opC
     end
     function 𝒫(op1,op2)
-        return DenseOperator(bC,[(vt_1[hi[1]] * (op1.data * vc_1[hj[1]])) * (vt_2[hi[2]] * (op2.data * vc_2[hj[2]])) for hi in handles, hj in handles])
+        opC = DenseOperator(bC)
+        Threads.@threads for i in 1:length(handles)
+            hi = handles[i]
+            for j in 1:length(handles)
+                hj = handles[j]
+                opC.data[i,j] = (vt_1[hi[1]] * (op1.data * vc_1[hj[1]])) * (vt_2[hi[2]] * (op2.data * vc_2[hj[2]]))
+            end
+        end
+        return opC
     end
 
     # TO DO: exploit Hermicianity of H to compute half of the matrix elements in the corner
@@ -317,14 +341,38 @@ function hmerge(s1::AbstractSystem,s2::AbstractSystem,ρ1::DenseOperator{B1,B1},
 
     function 𝒫1(op)
         # TO DO: take advantage of orthogonormality to get rid of the scalar product on subspace 2
-        return DenseOperator(bC,[vt_1[hi[1]] * (op.data * vc_1[hj[1]]) * (vt_2[hi[2]]*vc_2[hj[2]]) for hi in handles, hj in handles])
+        opC = DenseOperator(bC)
+        Threads.@threads for i in 1:length(handles)
+            hi = handles[i]
+            for j in 1:length(handles)
+                hj = handles[j]
+                opC.data[i,j] = vt_1[hi[1]] * (op.data * vc_1[hj[1]]) * (vt_2[hi[2]]*vc_2[hj[2]])
+            end
+        end
+        return opC
     end
     function 𝒫2(op)
         # TO DO: take advantage of orthogonormality to get rid of the scalar product on subspace 1
-        return DenseOperator(bC,[vt_2[hi[2]] * (op.data * vc_2[hj[2]]) * (vt_1[hi[1]]*vc_1[hj[1]]) for hi in handles, hj in handles])
+        opC = DenseOperator(bC)
+        Threads.@threads for i in 1:length(handles)
+            hi = handles[i]
+            for j in 1:length(handles)
+                hj = handles[j]
+                opC.data[i,j] = vt_2[hi[2]] * (op.data * vc_2[hj[2]]) * (vt_1[hi[1]]*vc_1[hj[1]])
+            end
+        end
+        return opC
     end
     function 𝒫(op1,op2)
-        return DenseOperator(bC,[(vt_1[hi[1]] * (op1.data * vc_1[hj[1]])) * (vt_2[hi[2]] * (op2.data * vc_2[hj[2]])) for hi in handles, hj in handles])
+        opC = DenseOperator(bC)
+        Threads.@threads for i in 1:length(handles)
+            hi = handles[i]
+            for j in 1:length(handles)
+                hj = handles[j]
+                opC.data[i,j] = (vt_1[hi[1]] * (op1.data * vc_1[hj[1]])) * (vt_2[hi[2]] * (op2.data * vc_2[hj[2]]))
+            end
+        end
+        return opC
     end
 
     # TO DO: exploit Hermicianity of H to compute half of the matrix elements in the corner
@@ -383,14 +431,38 @@ function Base.merge(s1::ZnSystem{N},s2::ZnSystem{N},d::Integer,ρ1::DenseOperato
 
     function 𝒫1(op)
         # TO DO: take advantage of orthogonormality to get rid of the scalar product on subspace 2
-        return DenseOperator(bC,[vt_1[hi[1]] * (op.data * vc_1[hj[1]]) * (vt_2[hi[2]]*vc_2[hj[2]]) for hi in handles, hj in handles])
+        opC = DenseOperator(bC)
+        Threads.@threads for i in 1:length(handles)
+            hi = handles[i]
+            for j in 1:length(handles)
+                hj = handles[j]
+                opC.data[i,j] = vt_1[hi[1]] * (op.data * vc_1[hj[1]]) * (vt_2[hi[2]]*vc_2[hj[2]])
+            end
+        end
+        return opC
     end
     function 𝒫2(op)
         # TO DO: take advantage of orthogonormality to get rid of the scalar product on subspace 1
-        return DenseOperator(bC,[vt_2[hi[2]] * (op.data * vc_2[hj[2]]) * (vt_1[hi[1]]*vc_1[hj[1]]) for hi in handles, hj in handles])
+        opC = DenseOperator(bC)
+        Threads.@threads for i in 1:length(handles)
+            hi = handles[i]
+            for j in 1:length(handles)
+                hj = handles[j]
+                opC.data[i,j] = vt_2[hi[2]] * (op.data * vc_2[hj[2]]) * (vt_1[hi[1]]*vc_1[hj[1]])
+            end
+        end
+        return opC
     end
     function 𝒫(op1,op2)
-        return DenseOperator(bC,[(vt_1[hi[1]] * (op1.data * vc_1[hj[1]])) * (vt_2[hi[2]] * (op2.data * vc_2[hj[2]])) for hi in handles, hj in handles])
+        opC = DenseOperator(bC)
+        Threads.@threads for i in 1:length(handles)
+            hi = handles[i]
+            for j in 1:length(handles)
+                hj = handles[j]
+                opC.data[i,j] = (vt_1[hi[1]] * (op1.data * vc_1[hj[1]])) * (vt_2[hi[2]] * (op2.data * vc_2[hj[2]]))
+            end
+        end
+        return opC
     end
 
     # TO DO: exploit Hermicianity of H to compute half of the matrix elements in the corner
