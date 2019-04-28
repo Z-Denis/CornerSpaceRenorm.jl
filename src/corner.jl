@@ -248,15 +248,18 @@ function vmerge(s1::AbstractSystem,s2::AbstractSystem,ρ1::DenseOperator{B1,B1},
     vc_1 = map(x->conj(x.data), ϕs_1)
     vt_2 = map(x->transpose(x.data), ϕs_2)
     vc_2 = map(x->conj(x.data), ϕs_2)
+    cache = [similar(first(vc_1)) for i in 1:Threads.nthreads()]
+    cache2 = [similar(first(vc_1)) for i in 1:Threads.nthreads()]
 
     function 𝒫1(op)
         # TO DO: take advantage of orthogonormality to get rid of the scalar product on subspace 2
         opC = DenseOperator(bC)
-        Threads.@threads for i in 1:length(handles)
-            hi = handles[i]
-            for j in 1:length(handles)
-                hj = handles[j]
-                opC.data[i,j] = vt_1[hi[1]] * (op.data * vc_1[hj[1]]) * (vt_2[hi[2]]*vc_2[hj[2]])
+        Threads.@threads for j in 1:length(handles)
+            hj = handles[j]
+            cache[Threads.threadid()] .= op.data * vc_1[hj[1]]
+            for i in 1:length(handles)
+                hi = handles[i]
+                opC.data[i,j] = vt_1[hi[1]] * cache[Threads.threadid()] * (vt_2[hi[2]]*vc_2[hj[2]])
             end
         end
         return opC
@@ -264,22 +267,25 @@ function vmerge(s1::AbstractSystem,s2::AbstractSystem,ρ1::DenseOperator{B1,B1},
     function 𝒫2(op)
         # TO DO: take advantage of orthogonormality to get rid of the scalar product on subspace 1
         opC = DenseOperator(bC)
-        Threads.@threads for i in 1:length(handles)
-            hi = handles[i]
-            for j in 1:length(handles)
-                hj = handles[j]
-                opC.data[i,j] = vt_2[hi[2]] * (op.data * vc_2[hj[2]]) * (vt_1[hi[1]]*vc_1[hj[1]])
+        Threads.@threads for j in 1:length(handles)
+            hj = handles[j]
+            cache[Threads.threadid()] .= op.data * vc_2[hj[2]]
+            for i in 1:length(handles)
+                hi = handles[i]
+                opC.data[i,j] = vt_2[hi[2]] * cache[Threads.threadid()] * (vt_1[hi[1]]*vc_1[hj[1]])
             end
         end
         return opC
     end
     function 𝒫(op1,op2)
         opC = DenseOperator(bC)
-        Threads.@threads for i in 1:length(handles)
-            hi = handles[i]
-            for j in 1:length(handles)
-                hj = handles[j]
-                opC.data[i,j] = (vt_1[hi[1]] * (op1.data * vc_1[hj[1]])) * (vt_2[hi[2]] * (op2.data * vc_2[hj[2]]))
+        Threads.@threads for j in 1:length(handles)
+            hj = handles[j]
+            cache[Threads.threadid()] .= op1.data * vc_1[hj[1]]
+            cache2[Threads.threadid()] .= op2.data * vc_2[hj[2]]
+            for i in 1:length(handles)
+                hi = handles[i]
+                opC.data[i,j] = (vt_1[hi[1]] * cache[Threads.threadid()]) * (vt_2[hi[2]] * cache2[Threads.threadid()])
             end
         end
         return opC
@@ -338,15 +344,18 @@ function hmerge(s1::AbstractSystem,s2::AbstractSystem,ρ1::DenseOperator{B1,B1},
     vc_1 = map(x->conj(x.data), ϕs_1)
     vt_2 = map(x->transpose(x.data), ϕs_2)
     vc_2 = map(x->conj(x.data), ϕs_2)
+    cache = [similar(first(vc_1)) for i in 1:Threads.nthreads()]
+    cache2 = [similar(first(vc_1)) for i in 1:Threads.nthreads()]
 
     function 𝒫1(op)
         # TO DO: take advantage of orthogonormality to get rid of the scalar product on subspace 2
         opC = DenseOperator(bC)
-        Threads.@threads for i in 1:length(handles)
-            hi = handles[i]
-            for j in 1:length(handles)
-                hj = handles[j]
-                opC.data[i,j] = vt_1[hi[1]] * (op.data * vc_1[hj[1]]) * (vt_2[hi[2]]*vc_2[hj[2]])
+        Threads.@threads for j in 1:length(handles)
+            hj = handles[j]
+            cache[Threads.threadid()] .= op.data * vc_1[hj[1]]
+            for i in 1:length(handles)
+                hi = handles[i]
+                opC.data[i,j] = vt_1[hi[1]] * cache[Threads.threadid()] * (vt_2[hi[2]]*vc_2[hj[2]])
             end
         end
         return opC
@@ -354,22 +363,25 @@ function hmerge(s1::AbstractSystem,s2::AbstractSystem,ρ1::DenseOperator{B1,B1},
     function 𝒫2(op)
         # TO DO: take advantage of orthogonormality to get rid of the scalar product on subspace 1
         opC = DenseOperator(bC)
-        Threads.@threads for i in 1:length(handles)
-            hi = handles[i]
-            for j in 1:length(handles)
-                hj = handles[j]
-                opC.data[i,j] = vt_2[hi[2]] * (op.data * vc_2[hj[2]]) * (vt_1[hi[1]]*vc_1[hj[1]])
+        Threads.@threads for j in 1:length(handles)
+            hj = handles[j]
+            cache[Threads.threadid()] .= op.data * vc_2[hj[2]]
+            for i in 1:length(handles)
+                hi = handles[i]
+                opC.data[i,j] = vt_2[hi[2]] * cache[Threads.threadid()] * (vt_1[hi[1]]*vc_1[hj[1]])
             end
         end
         return opC
     end
     function 𝒫(op1,op2)
         opC = DenseOperator(bC)
-        Threads.@threads for i in 1:length(handles)
-            hi = handles[i]
-            for j in 1:length(handles)
-                hj = handles[j]
-                opC.data[i,j] = (vt_1[hi[1]] * (op1.data * vc_1[hj[1]])) * (vt_2[hi[2]] * (op2.data * vc_2[hj[2]]))
+        Threads.@threads for j in 1:length(handles)
+            hj = handles[j]
+            cache[Threads.threadid()] .= op1.data * vc_1[hj[1]]
+            cache2[Threads.threadid()] .= op2.data * vc_2[hj[2]]
+            for i in 1:length(handles)
+                hi = handles[i]
+                opC.data[i,j] = (vt_1[hi[1]] * cache[Threads.threadid()]) * (vt_2[hi[2]] * cache2[Threads.threadid()])
             end
         end
         return opC
@@ -428,15 +440,18 @@ function Base.merge(s1::ZnSystem{N},s2::ZnSystem{N},d::Integer,ρ1::DenseOperato
     vc_1 = map(x->conj(x.data), ϕs_1)
     vt_2 = map(x->transpose(x.data), ϕs_2)
     vc_2 = map(x->conj(x.data), ϕs_2)
+    cache = [similar(first(vc_1)) for i in 1:Threads.nthreads()]
+    cache2 = [similar(first(vc_1)) for i in 1:Threads.nthreads()]
 
     function 𝒫1(op)
         # TO DO: take advantage of orthogonormality to get rid of the scalar product on subspace 2
         opC = DenseOperator(bC)
-        Threads.@threads for i in 1:length(handles)
-            hi = handles[i]
-            for j in 1:length(handles)
-                hj = handles[j]
-                opC.data[i,j] = vt_1[hi[1]] * (op.data * vc_1[hj[1]]) * (vt_2[hi[2]]*vc_2[hj[2]])
+        Threads.@threads for j in 1:length(handles)
+            hj = handles[j]
+            cache[Threads.threadid()] .= op.data * vc_1[hj[1]]
+            for i in 1:length(handles)
+                hi = handles[i]
+                opC.data[i,j] = vt_1[hi[1]] * cache[Threads.threadid()] * (vt_2[hi[2]]*vc_2[hj[2]])
             end
         end
         return opC
@@ -444,22 +459,118 @@ function Base.merge(s1::ZnSystem{N},s2::ZnSystem{N},d::Integer,ρ1::DenseOperato
     function 𝒫2(op)
         # TO DO: take advantage of orthogonormality to get rid of the scalar product on subspace 1
         opC = DenseOperator(bC)
-        Threads.@threads for i in 1:length(handles)
-            hi = handles[i]
-            for j in 1:length(handles)
-                hj = handles[j]
-                opC.data[i,j] = vt_2[hi[2]] * (op.data * vc_2[hj[2]]) * (vt_1[hi[1]]*vc_1[hj[1]])
+        Threads.@threads for j in 1:length(handles)
+            hj = handles[j]
+            cache[Threads.threadid()] .= op.data * vc_2[hj[2]]
+            for i in 1:length(handles)
+                hi = handles[i]
+                opC.data[i,j] = vt_2[hi[2]] * cache[Threads.threadid()] * (vt_1[hi[1]]*vc_1[hj[1]])
             end
         end
         return opC
     end
     function 𝒫(op1,op2)
         opC = DenseOperator(bC)
-        Threads.@threads for i in 1:length(handles)
-            hi = handles[i]
-            for j in 1:length(handles)
-                hj = handles[j]
-                opC.data[i,j] = (vt_1[hi[1]] * (op1.data * vc_1[hj[1]])) * (vt_2[hi[2]] * (op2.data * vc_2[hj[2]]))
+        Threads.@threads for j in 1:length(handles)
+            hj = handles[j]
+            cache[Threads.threadid()] .= op1.data * vc_1[hj[1]]
+            cache2[Threads.threadid()] .= op2.data * vc_2[hj[2]]
+            for i in 1:length(handles)
+                hi = handles[i]
+                opC.data[i,j] = (vt_1[hi[1]] * cache[Threads.threadid()]) * (vt_2[hi[2]] * cache2[Threads.threadid()])
+            end
+        end
+        return opC
+    end
+
+    # TO DO: exploit Hermicianity of H to compute half of the matrix elements in the corner
+    H = 𝒫1(s1.H) + 𝒫2(s2.H);
+    gbasis = H.basis_l;
+    @inbounds for i in 1:length(s1.Htext[d])
+        Ht = 𝒫(s1.Htext[d][i],dagger(s2.Htint[d][i])).data;
+        H.data .+= Ht .+ Ht';
+    end
+    hermitianize!(H);
+
+    J = [𝒫1(s1.J[i]) for i in 1:length(s1.J)] ∪ [𝒫2(s2.J[i]) for i in 1:length(s2.J)]
+
+    #return H
+    d⊥ = [_d for _d in 1:N if _d!= d]
+    T = typeof(H)
+    Htint::Array{Array{T,1},1} = [Array{T,1}(undef,0) for i in 1:N]
+    Htext::Array{Array{T,1},1} = [Array{T,1}(undef,0) for i in 1:N]
+
+    Htint[d] = 𝒫1.(s1.Htint[d])
+    Htext[d] = 𝒫2.(s2.Htext[d])
+    for _d in d⊥
+        Htint[_d] = [𝒫1.(s1.Htint[_d]); 𝒫2.(s2.Htint[_d])]
+        Htext[_d] = [𝒫1.(s1.Htext[_d]); 𝒫2.(s2.Htext[_d])]
+    end
+
+    # TO DO: Test that observable types are compatible
+    obs = [[Dict{String,typeof(H)}() for i in 1:nv(s1.lattice)]; [Dict{String,typeof(H)}() for i in 1:nv(s2.lattice)]]
+
+    for i in 1:length(s1.observables)
+        for k in keys(s1.observables[i])
+            obs[i][k] = 𝒫1(s1.observables[i][k])
+        end
+    end
+    for i in 1:length(s2.observables)
+        for k in keys(s2.observables[i])
+            obs[length(s1.observables)+i][k] = 𝒫2(s2.observables[i][k])
+        end
+    end
+
+    return ZnSystem{N,typeof(lattice),typeof(gbasis),typeof(H),eltype(first(Htint)),eltype(J),typeof(H)}(lattice,gbasis,H,Tuple(Htint),Tuple(Htext),J,obs)
+end
+
+function merge_test(s1::ZnSystem{N},s2::ZnSystem{N},d::Integer,ρ1::DenseOperator{B1,B1},ρ2::DenseOperator{B2,B2},M::Int) where {N,B1<:Basis,B2<:Basis}
+    # TO DO: tests
+    lattice = union(s1.lattice,s2.lattice,d)
+
+    bC, handles, ϕs_1, ϕs_2 = corner_subspace(ρ1,ρ2,M)
+    vt_1 = map(x->transpose(x.data), ϕs_1)
+    vc_1 = map(x->conj(x.data), ϕs_1)
+    vt_2 = map(x->transpose(x.data), ϕs_2)
+    vc_2 = map(x->conj(x.data), ϕs_2)
+    cache = [similar(first(vc_1)) for i in 1:Threads.nthreads()]
+    cache2 = [similar(first(vc_1)) for i in 1:Threads.nthreads()]
+
+    function 𝒫1(op)
+        # TO DO: take advantage of orthogonormality to get rid of the scalar product on subspace 2
+        opC = DenseOperator(bC)
+        Threads.@threads for j in 1:length(handles)
+            hj = handles[j]
+            cache[Threads.threadid()] .= op.data * vc_1[hj[1]]
+            for i in 1:length(handles)
+                hi = handles[i]
+                opC.data[i,j] = vt_1[hi[1]] * cache[Threads.threadid()] * (vt_2[hi[2]]*vc_2[hj[2]])
+            end
+        end
+        return opC
+    end
+    function 𝒫2(op)
+        # TO DO: take advantage of orthogonormality to get rid of the scalar product on subspace 1
+        opC = DenseOperator(bC)
+        Threads.@threads for j in 1:length(handles)
+            hj = handles[j]
+            cache[Threads.threadid()] .= op.data * vc_2[hj[2]]
+            for i in 1:length(handles)
+                hi = handles[i]
+                opC.data[i,j] = vt_2[hi[2]] * cache[Threads.threadid()] * (vt_1[hi[1]]*vc_1[hj[1]])
+            end
+        end
+        return opC
+    end
+    function 𝒫(op1,op2)
+        opC = DenseOperator(bC)
+        Threads.@threads for j in 1:length(handles)
+            hj = handles[j]
+            cache[Threads.threadid()] .= op1.data * vc_1[hj[1]]
+            cache2[Threads.threadid()] .= op2.data * vc_2[hj[2]]
+            for i in 1:length(handles)
+                hi = handles[i]
+                opC.data[i,j] = (vt_1[hi[1]] * cache[Threads.threadid()]) * (vt_2[hi[2]] * cache2[Threads.threadid()])
             end
         end
         return opC
