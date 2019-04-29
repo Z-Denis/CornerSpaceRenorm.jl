@@ -71,7 +71,7 @@ Construct an `N`-dimensional cubic lattice of type `ZnLattice{N}`.
 function ZnLattice(shape::Tuple{Vararg{Int,N}};periodic::Bool = false) where N
     @assert N > 0 "The lattice must be positive-dimensional."
     if N == 1
-        return ZnLattice{1}(Grid(collect(shape);periodic=periodic),shape,([1],),([shape[end]],))
+        return ZnLattice{1}(Grid(collect(shape);periodic=periodic),shape,([1],),([shape[end]],),periodic)
     else
         L = Grid(collect(shape);periodic=periodic);
         lids = LinearIndices(shape)
@@ -152,7 +152,7 @@ function hunion(L1::SquareLattice,L2::SquareLattice)
 end
 
 function rem_boundaries!(L::ZnLattice{N}, d::Int) where N
-    if L.pbc == true
+    if L.pbc == true && L.shape[d] > 2
         eb = [e for e in edges(L) if e.src ∈ L.Vint[d] && e.dst ∈ L.Vext[d]]
         for e in eb
             rem_edge!(L.L,e)

@@ -526,6 +526,7 @@ end
 
 function merge_test(s1::ZnSystem{N},s2::ZnSystem{N},d::Integer,ρ1::DenseOperator{B1,B1},ρ2::DenseOperator{B2,B2},M::Int) where {N,B1<:Basis,B2<:Basis}
     # TO DO: tests
+    @assert s1.lattice.pbc == s2.lattice.pbc "Cannot merge systems with periodic and open open boundary conditions."
     lattice = union(s1.lattice,s2.lattice,d)
 
     bC, handles, ϕs_1, ϕs_2 = corner_subspace(ρ1,ρ2,M)
@@ -577,11 +578,29 @@ function merge_test(s1::ZnSystem{N},s2::ZnSystem{N},d::Integer,ρ1::DenseOperato
     end
 
     # TO DO: exploit Hermicianity of H to compute half of the matrix elements in the corner
-    H = 𝒫1(s1.H) + 𝒫2(s2.H);
+    H = DenseOperator(bC)
+    if lattice.pbc
+        Ht1 = zeros(ComplexF64,size(s1.H.data))
+        @inbounds for i in 1:length(s1.Htext[d])
+            Ht1 .+= (s1.Htext[d][i] * dagger(s1.Htint[d][i])).data;
+        end
+        Ht2 = zeros(ComplexF64,size(s2.H.data))
+        @inbounds for i in 1:length(s2.Htext[d])
+            Ht2 .+= (s2.Htext[d][i] * dagger(s2.Htint[d][i])).data;
+        end
+
+        H.data .= 𝒫1(DenseOperator(s1.gbasis, s1.H.data .- (Ht1 .+ Ht1'))).data
+               .+ 𝒫2(DenseOperator(s2.gbasis, s2.H.data .- (Ht2 .+ Ht2'))).data;
+    else
+        H.data .= 𝒫1(s1.H).data .+ 𝒫2(s2.H).data;
+    end
     gbasis = H.basis_l;
     Ht = similar(H.data)
     @inbounds for i in 1:length(s1.Htext[d])
         Ht .= 𝒫(s1.Htext[d][i],dagger(s2.Htint[d][i])).data;
+        if lattice.pbc
+            Ht .+= 𝒫(s1.Htint[d][i],dagger(s2.Htext[d][i])).data;
+        end
         H.data .+= Ht .+ Ht';
     end
     hermitianize!(H);
