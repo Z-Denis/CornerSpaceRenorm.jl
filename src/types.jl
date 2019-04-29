@@ -90,13 +90,16 @@ end
 @inline LightGraphs.edges(L::Lattice) = LightGraphs.edges(L.L);
 @inline LightGraphs.nv(L::Lattice) = LightGraphs.nv(L.L);
 @inline LightGraphs.ne(L::Lattice) = LightGraphs.ne(L.L);
-@inline LightGraphs.has_edge(L::Lattice) = LightGraphs.has_edge(L.L);
+@inline LightGraphs.has_edge(L::Lattice, s::Int64, d::Int64) = LightGraphs.has_edge(L.L,s,d);
 @inline LightGraphs.has_vertex(L::Lattice) = LightGraphs.has_vertex(L.L);
+@inline LightGraphs.has_edge(L::Lattice, e::AbstractEdge{Int64}) = LightGraphs.has_edge(L.L,e);
 @inline LightGraphs.inneighbors(L::Lattice) = LightGraphs.inneighbors(L.L);
+@inline LightGraphs.has_vertex(L::Lattice, v::Int64) = LightGraphs.has_vertex(L.L,v);
 @inline LightGraphs.outneighbors(L::Lattice) = LightGraphs.outneighbors(L.L);
+@inline LightGraphs.inneighbors(L::Lattice, v::Int64) = LightGraphs.inneighbors(L.L,v);
+@inline LightGraphs.outneighbors(L::Lattice, v::Int64) = LightGraphs.outneighbors(L.L,v);
 @inline LightGraphs.is_directed(L::Lattice) = false;
 @inline LightGraphs.is_directed(T::Type{L}) where {L<:Lattice} = false;
-@inline extsites(L::Lattice) = [L.Vu; L.Vb; L.Vl[2:end-1]; L.Vr[2:end-1]];
 
 GraphPlot.gplot(L::Lattice; kwargs...) = GraphPlot.gplot(L.L; kwargs...)
 GraphPlot.gplot(L::Lattice, locs_x_in::Vector{R}, locs_y_in::Vector{R}; kwargs...) where R<:Real = GraphPlot.gplot(L.L, locs_x_in, locs_y_in; kwargs...)
