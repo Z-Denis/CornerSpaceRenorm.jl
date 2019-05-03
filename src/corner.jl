@@ -30,7 +30,7 @@ function max_prod_pairs(a::AbstractVector, b::AbstractVector, k::Int)
     handles = Array{Tuple{Int64,Int64},1}(undef, k)
     prod_pairs = zeros(eltype(a), k)
     i = 1
-    while i <= k || length(h) == 0
+    while i <= k && length(h) > 0
         prod_pairs[i], heap_idx = top_with_handle(h);
         handles[i] = (ix_a[heap_idcs[heap_idx][1]], ix_b[heap_idcs[heap_idx][2]])
         pop!(h);
@@ -492,7 +492,7 @@ function Base.merge(s1::ZnSystem{N},s2::ZnSystem{N},d::Integer,ρ1::DenseOperato
     end
     hermitianize!(H);
 
-    J = [𝒫1(s1.J[i]) for i in 1:length(s1.J)] ∪ [𝒫2(s2.J[i]) for i in 1:length(s2.J)]
+    J = [[𝒫1(s1.J[i]) for i in 1:length(s1.J)]; [𝒫2(s2.J[i]) for i in 1:length(s2.J)]]
 
     #return H
     d⊥ = [_d for _d in 1:N if _d!= d]
@@ -584,22 +584,25 @@ function merge_test(s1::ZnSystem{N},s2::ZnSystem{N},d::Integer,ρ1::DenseOperato
         @inbounds for i in 1:length(s1.Htext[d])
             Ht1 .+= (s1.Htext[d][i] * dagger(s1.Htint[d][i])).data;
         end
+
         Ht2 = zeros(ComplexF64,size(s2.H.data))
         @inbounds for i in 1:length(s2.Htext[d])
             Ht2 .+= (s2.Htext[d][i] * dagger(s2.Htint[d][i])).data;
         end
 
-        H.data .= 𝒫1(DenseOperator(s1.gbasis, s1.H.data .- (Ht1 .+ Ht1'))).data
-               .+ 𝒫2(DenseOperator(s2.gbasis, s2.H.data .- (Ht2 .+ Ht2'))).data;
+        H1 = DenseOperator(s1.H) - (DenseOperator(s1.gbasis,Ht1 .+ Ht1'))
+        H2 = DenseOperator(s2.H) - (DenseOperator(s2.gbasis,Ht2 .+ Ht2'))
+        H.data .= 𝒫1(H1).data .+ 𝒫2(H2).data;
+        #H.data .= 𝒫1(DenseOperator(s1.gbasis, s1.H.data .- (Ht1 .+ Ht1'))).data .+ 𝒫2(DenseOperator(s2.gbasis, s2.H.data .- (Ht2 .+ Ht2'))).data;
     else
         H.data .= 𝒫1(s1.H).data .+ 𝒫2(s2.H).data;
     end
     gbasis = H.basis_l;
-    Ht = similar(H.data)
+    Ht = zeros(ComplexF64,size(H.data));
     @inbounds for i in 1:length(s1.Htext[d])
         Ht .= 𝒫(s1.Htext[d][i],dagger(s2.Htint[d][i])).data;
         if lattice.pbc
-            Ht .+= 𝒫(s1.Htint[d][i],dagger(s2.Htext[d][i])).data;
+            Ht .+= 𝒫(dagger(s1.Htint[d][i]), s2.Htext[d][i]).data;
         end
         H.data .+= Ht .+ Ht';
     end
@@ -631,6 +634,82 @@ function merge_test(s1::ZnSystem{N},s2::ZnSystem{N},d::Integer,ρ1::DenseOperato
     for i in 1:length(s2.observables)
         for k in keys(s2.observables[i])
             obs[length(s1.observables)+i][k] = 𝒫2(s2.observables[i][k])
+        end
+    end
+
+    return ZnSystem{N,typeof(lattice),typeof(gbasis),typeof(H),eltype(first(Htint)),eltype(J),typeof(H)}(lattice,gbasis,H,Tuple(Htint),Tuple(Htext),J,obs)
+end
+
+function merge_test_no_compression(s1::ZnSystem{N},s2::ZnSystem{N},d::Integer) where {N,B1<:Basis,B2<:Basis}
+    # TO DO: tests
+    @assert s1.lattice.pbc == s2.lattice.pbc "Cannot merge systems with periodic and open open boundary conditions."
+    lattice = union(s1.lattice,s2.lattice,d)
+    Id1 = one(s1.gbasis)
+    Id2 = one(s2.gbasis)
+
+    bC = typeof(s1.gbasis) <: CompositeBasis ? CompositeBasis(s1.gbasis.bases...,s2.gbasis.bases...) : CompositeBasis(s1.gbasis,s2.gbasis)
+    H = DenseOperator(bC)
+
+    if lattice.pbc
+        Ht1 = zeros(ComplexF64,size(s1.H.data))
+        @inbounds for i in 1:length(s1.Htext[d])
+            Ht1 .+= (s1.Htext[d][i] * dagger(s1.Htint[d][i])).data;
+        end
+
+        Ht2 = zeros(ComplexF64,size(s2.H.data))
+        @inbounds for i in 1:length(s2.Htext[d])
+            Ht2 .+= (s2.Htext[d][i] * dagger(s2.Htint[d][i])).data;
+        end
+
+        #=
+        H1 = DenseOperator(s1.H) - (DenseOperator(s1.gbasis,Ht1 .+ Ht1'))
+        H2 = DenseOperator(s2.H) - (DenseOperator(s2.gbasis,Ht2 .+ Ht2'))
+        H.data .= DenseOperator(H1 ⊗ Id2 + Id2 ⊗ H1).data
+        =#
+
+        H.data .= (DenseOperator(s1.gbasis, s1.H.data .- (Ht1 .+ Ht1')) ⊗ Id2).data .+ (Id1 ⊗ DenseOperator(s2.gbasis, s2.H.data .- (Ht2 .+ Ht2'))).data;
+    else
+        H.data .= (s1.H ⊗ Id2).data .+ (Id1 ⊗ s2.H).data;
+    end
+    gbasis = H.basis_l;
+
+    Ht = similar(H.data)
+    @inbounds for i in 1:length(s1.Htext[d])
+        Ht .= (s1.Htext[d][i] ⊗ dagger(s2.Htint[d][i])).data;
+        if lattice.pbc
+            Ht .+= (dagger(s1.Htint[d][i]) ⊗ s2.Htext[d][i]).data;
+        end
+        H.data .+= (Ht .+ Ht');
+    end
+
+    hermitianize!(H);
+
+    J = [[s1.J[i]⊗Id2 for i in 1:length(s1.J)]; [Id1⊗s2.J[i] for i in 1:length(s2.J)]]
+
+    #return H
+    d⊥ = [_d for _d in 1:N if _d!= d]
+    T = typeof(H)
+    Htint::Array{Array{T,1},1} = [Array{T,1}(undef,0) for i in 1:N]
+    Htext::Array{Array{T,1},1} = [Array{T,1}(undef,0) for i in 1:N]
+
+    Htint[d] = [DenseOperator(s1.Htint[d][i] ⊗ Id2) for i in 1:length(s1.Htext[d])]
+    Htext[d] = [DenseOperator(Id1 ⊗ s2.Htext[d][i]) for i in 1:length(s2.Htext[d])]
+    for _d in d⊥
+        Htint[_d] = [[DenseOperator(s1.Htint[_d][i] ⊗ Id2) for i in 1:length(s1.Htint[_d])]; [DenseOperator(Id1 ⊗ s2.Htint[_d]) for i in 1:length(s2.Htint[_d])]]
+        Htext[_d] = [[DenseOperator(s1.Htext[_d][i] ⊗ Id2) for i in 1:length(s1.Htext[_d])]; [DenseOperator(Id1 ⊗ s2.Htext[_d]) for i in 1:length(s2.Htext[_d])]]
+    end
+
+    # TO DO: Test that observable types are compatible
+    obs = [[Dict{String,typeof(H)}() for i in 1:nv(s1.lattice)]; [Dict{String,typeof(H)}() for i in 1:nv(s2.lattice)]]
+
+    for i in 1:length(s1.observables)
+        for k in keys(s1.observables[i])
+            obs[i][k] = DenseOperator(s1.observables[i][k] ⊗ Id2)
+        end
+    end
+    for i in 1:length(s2.observables)
+        for k in keys(s2.observables[i])
+            obs[length(s1.observables)+i][k] = DenseOperator(Id1 ⊗ s2.observables[i][k])
         end
     end
 
