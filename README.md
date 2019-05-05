@@ -73,7 +73,7 @@ going to higher corner dimensions, i.e. the corner has reached convergence.
 
 ## More generic Lattices
 
-More generic lattices with an arbitrary number of directions `N` along which they
+More generic (![alt text](https://latex.codecogs.com/gif.latex?\mathbb{Z}^N)) lattices with an arbitrary number of directions `N` along which they
 can be appended are implemented via the type `ZnLattice{N}`. Its constructor
 interface `ZnSystem(lat, H, lHt, J)` builds by default an `N`-dimensional cubic
 lattice, however it is possible to define more generic unit cells by directly

@@ -55,6 +55,9 @@ struct ZnLattice{N} <: Lattice
 
     Vint::Tuple{Vararg{Vector{Int64},N}}
     Vext::Tuple{Vararg{Vector{Int64},N}}
+
+    # Boundary conditions
+    pbc::Bool
 end
 
 """
@@ -68,7 +71,7 @@ Construct an `N`-dimensional cubic lattice of type `ZnLattice{N}`.
 function ZnLattice(shape::Tuple{Vararg{Int,N}};periodic::Bool = false) where N
     @assert N > 0 "The lattice must be positive-dimensional."
     if N == 1
-        return ZnLattice{1}(Grid(collect(shape);periodic=periodic),shape,([1],),([shape[end]],))
+        return ZnLattice{1}(Grid(collect(shape);periodic=periodic),shape,([1],),([shape[end]],),periodic)
     else
         L = Grid(collect(shape);periodic=periodic);
         lids = LinearIndices(shape)
@@ -77,7 +80,7 @@ function ZnLattice(shape::Tuple{Vararg{Int,N}};periodic::Bool = false) where N
         symbids = [:end;fill(:(:), N-1)]
         Vext = Tuple([Core.eval(Main,Expr(:ref, :($lids), circshift(symbids,d)...))[:] for d in 0:N-1])
 
-        return ZnLattice{N}(L,shape,Vint,Vext)
+        return ZnLattice{N}(L,shape,Vint,Vext,periodic)
     end
 end
 
@@ -88,8 +91,11 @@ end
 @inline LightGraphs.nv(L::Lattice) = LightGraphs.nv(L.L);
 @inline LightGraphs.ne(L::Lattice) = LightGraphs.ne(L.L);
 @inline LightGraphs.has_edge(L::Lattice, s::Int64, d::Int64) = LightGraphs.has_edge(L.L,s,d);
+@inline LightGraphs.has_vertex(L::Lattice) = LightGraphs.has_vertex(L.L);
 @inline LightGraphs.has_edge(L::Lattice, e::AbstractEdge{Int64}) = LightGraphs.has_edge(L.L,e);
+@inline LightGraphs.inneighbors(L::Lattice) = LightGraphs.inneighbors(L.L);
 @inline LightGraphs.has_vertex(L::Lattice, v::Int64) = LightGraphs.has_vertex(L.L,v);
+@inline LightGraphs.outneighbors(L::Lattice) = LightGraphs.outneighbors(L.L);
 @inline LightGraphs.inneighbors(L::Lattice, v::Int64) = LightGraphs.inneighbors(L.L,v);
 @inline LightGraphs.outneighbors(L::Lattice, v::Int64) = LightGraphs.outneighbors(L.L,v);
 @inline LightGraphs.is_directed(L::Lattice) = false;
@@ -145,14 +151,40 @@ function hunion(L1::SquareLattice,L2::SquareLattice)
                                              L1.Vleft, nv(L1).+L2.Vright)
 end
 
+function rem_boundaries!(L::ZnLattice{N}, d::Int) where N
+    if L.pbc == true && L.shape[d] > 2
+        eb = [e for e in edges(L) if e.src ∈ L.Vint[d] && e.dst ∈ L.Vext[d]]
+        for e in eb
+            rem_edge!(L.L,e)
+        end
+    end
+    return L
+end
+
+function add_boundaries!(L::ZnLattice{N}, d::Int) where N
+    if L.pbc == true
+        for i in 1:length(L.Vext[d])
+            add_edge!(L.L,Edge(L.Vext[d][i],L.Vint[d][i]))
+        end
+    end
+    return L
+end
 """
     union(L1, L2, d)
 
 Merge two `ZnLattice{N}`s along the `d`-th dimension.
 """
-function Base.union(L1::ZnLattice{N},L2::ZnLattice{N},d::Integer) where N
+function Base.union(L1::ZnLattice{N},L2::ZnLattice{N},d::Int) where N
     @assert d <= N "Merging direction should be smaller than that of the lattices."
     @assert length(L1.Vext[d]) == length(L2.Vint[d]) "Lattices cannot be merged in this direction."
+    @assert L1.pbc == L2.pbc "Cannot merge a periodic and an open lattices together."
+    L1 = deepcopy(L1)
+    L2 = deepcopy(L2)
+    # Remove boundary edges along the merging dimension if periodic
+    rem_boundaries!(L1, d)
+    rem_boundaries!(L2, d)
+    pbc = L1.pbc
+
     L = blockdiag(L1.L,L2.L)
     for i in 1:length(L1.Vext[d])
         add_edge!(L,Edge(L1.Vext[d][i],nv(L1)+L2.Vint[d][i]))
@@ -160,13 +192,17 @@ function Base.union(L1::ZnLattice{N},L2::ZnLattice{N},d::Integer) where N
     shape = collect(L1.shape);
     shape[d] += L2.shape[d]
     d⊥ = [_d for _d in 1:N if _d!= d]
+
     Vint = collect(L1.Vint)
     Vext = [nv(L1) .+ vs for vs in L2.Vext]
     for _d in d⊥
         Vint[_d] = [L1.Vint[_d]; nv(L1) .+ L2.Vint[_d]]
         Vext[_d] = [L1.Vext[_d]; nv(L1) .+ L2.Vext[_d]]
     end
-    ZnLattice{N}(L,Tuple(shape),Tuple(Vint),Tuple(Vext))
+
+    lat = ZnLattice{N}(L,Tuple(shape),Tuple(Vint),Tuple(Vext),pbc)
+    # Add edges between boundaries if periodic
+    add_boundaries!(lat, d)
 end
 
 """

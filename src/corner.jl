@@ -1,7 +1,48 @@
 using DataStructures, LinearAlgebra
 
 """
-    maxk(a, k)
+    CornerSpaceRenorm.mgs(X)
+
+Apply the modified Gram-Schmidt orthogonalisation procedure to a set of vectors.
+Vectors are passed as columns of a dense matrix `X`.
+"""
+function mgs(X::Matrix{T}) where T <: Number
+    m, n = size(X);
+    V = copy(X);
+    Q = copy(X);
+
+    for j = 1:n
+        @inbounds @views Q[:,j] .= V[:,j]./norm(V[:,j]);
+        @inbounds @views for k = j+1:n
+            axpy!(-BLAS.dotc(m, Q[:,j], 1, V[:,k], 1), Q[:,j], V[:,k])
+        end
+    end
+
+    return Q
+end
+
+"""
+    CornerSpaceRenorm.mgs!(X)
+
+In-place modified Gram-Schmidt orthogonalisation procedure.
+See also: [`CornerSpaceRenorm.mgs`](@ref)
+"""
+function mgs!(X::Matrix{T}) where T <: Number
+    m, n = size(X);
+    V = copy(X);
+
+    for j = 1:n
+        @inbounds @views X[:,j] .= V[:,j]./norm(V[:,j]);
+        @inbounds @views for k = j+1:n
+            axpy!(-BLAS.dotc(m, X[:,j], 1, V[:,k], 1), X[:,j], V[:,k])
+        end
+    end
+
+    return X
+end
+
+"""
+    CornerSpaceRenorm.maxk(a, k)
 
 Find `k` largest elements of an array and return their indices.
 # Arguments
@@ -14,7 +55,7 @@ function maxk(a::AbstractVector, k::Int)
 end
 
 """
-    max_prod_pairs(a, b, k)
+    CornerSpaceRenorm.max_prod_pairs(a, b, k)
 
 Find `k` pairs `(a_i,b_i)` with largest products from two arrays `a` and `b`.
 # Arguments
@@ -30,7 +71,7 @@ function max_prod_pairs(a::AbstractVector, b::AbstractVector, k::Int)
     handles = Array{Tuple{Int64,Int64},1}(undef, k)
     prod_pairs = zeros(eltype(a), k)
     i = 1
-    while i <= k || length(h) == 0
+    while i <= k && length(h) > 0
         prod_pairs[i], heap_idx = top_with_handle(h);
         handles[i] = (ix_a[heap_idcs[heap_idx][1]], ix_b[heap_idcs[heap_idx][2]])
         pop!(h);
@@ -44,7 +85,7 @@ function max_prod_pairs(a::AbstractVector, b::AbstractVector, k::Int)
 end
 
 """
-    corner_subspace(ρA, ρB, M)
+    CornerSpaceRenorm.corner_subspace(ρA, ρB, M)
 
 Find the `SubspaceBasis` associated with the `M`-dimensional corner defined by the
 pair of states `(ρA, ρB)`, the pairs of eigenkets of A and B defining the corner
@@ -59,6 +100,8 @@ function corner_subspace(ρA::DenseOperator{B1,B1}, ρB::DenseOperator{B2,B2}, M
     bB = ρB.basis_l
     ps_A, αs_A = eigen(ρA.data); # αs_A[:,i] : i-th eigenvector
     ps_B, αs_B = eigen(ρB.data);
+    mgs!(αs_A);
+    mgs!(αs_B);
     @inbounds ϕs_A = [Ket(bA, αs_A[:,i]) for i in 1:length(ps_A)]
     @inbounds ϕs_B = [Ket(bB, αs_B[:,i]) for i in 1:length(ps_B)]
     handles, prod_pairs = max_prod_pairs(real.(ps_A), real.(ps_B), M)
@@ -433,6 +476,7 @@ Merge two `ZnSystem`s along the `d`-th direction with corner compression.
 """
 function Base.merge(s1::ZnSystem{N},s2::ZnSystem{N},d::Integer,ρ1::DenseOperator{B1,B1},ρ2::DenseOperator{B2,B2},M::Int) where {N,B1<:Basis,B2<:Basis}
     # TO DO: tests
+    @assert s1.lattice.pbc == s2.lattice.pbc "Cannot merge systems with periodic and open open boundary conditions."
     lattice = union(s1.lattice,s2.lattice,d)
 
     bC, handles, ϕs_1, ϕs_2 = corner_subspace(ρ1,ρ2,M)
@@ -447,6 +491,19 @@ function Base.merge(s1::ZnSystem{N},s2::ZnSystem{N},d::Integer,ρ1::DenseOperato
         # TO DO: take advantage of orthogonormality to get rid of the scalar product on subspace 2
         opC = DenseOperator(bC)
         Threads.@threads for j in 1:length(handles)
+            hj = handles[j]
+            mul!(cache1[Threads.threadid()], op.data, vc_1[hj[1]])
+            for i in 1:length(handles)
+                hi = handles[i]
+                opC.data[i,j] = vt_1[hi[1]] * cache1[Threads.threadid()] * (vt_2[hi[2]]*vc_2[hj[2]])
+            end
+        end
+        return opC
+    end
+    function 𝒫1_bis(op)
+        # TO DO: take advantage of orthogonormality to get rid of the scalar product on subspace 2
+        opC = DenseOperator(bC)
+        for j in 1:length(handles)
             hj = handles[j]
             mul!(cache1[Threads.threadid()], op.data, vc_1[hj[1]])
             for i in 1:length(handles)
@@ -484,15 +541,36 @@ function Base.merge(s1::ZnSystem{N},s2::ZnSystem{N},d::Integer,ρ1::DenseOperato
     end
 
     # TO DO: exploit Hermicianity of H to compute half of the matrix elements in the corner
-    H = 𝒫1(s1.H) + 𝒫2(s2.H);
+    H = DenseOperator(bC)
+    if lattice.pbc
+        Ht1 = zeros(ComplexF64,size(s1.H.data))
+        if s1.lattice.shape[d] > 2
+            @inbounds for i in 1:length(s1.Htext[d])
+                Ht1 .+= (s1.Htext[d][i] * dagger(s1.Htint[d][i])).data;
+            end
+        end
+        Ht2 = zeros(ComplexF64,size(s2.H.data))
+        if s2.lattice.shape[d] > 2
+            @inbounds for i in 1:length(s2.Htext[d])
+                Ht2 .+= (s2.Htext[d][i] * dagger(s2.Htint[d][i])).data;
+            end
+        end
+        H.data .= 𝒫1(DenseOperator(s1.gbasis, s1.H.data .- (Ht1 .+ Ht1'))).data .+ 𝒫2(DenseOperator(s2.gbasis, s2.H.data .- (Ht2 .+ Ht2'))).data;
+    else
+        H.data .= 𝒫1(s1.H).data .+ 𝒫2(s2.H).data;
+    end
     gbasis = H.basis_l;
+    Ht = zeros(ComplexF64,size(H.data));
     @inbounds for i in 1:length(s1.Htext[d])
-        Ht = 𝒫(s1.Htext[d][i],dagger(s2.Htint[d][i])).data;
+        Ht .= 𝒫(s1.Htext[d][i],dagger(s2.Htint[d][i])).data;
+        if lattice.pbc
+            Ht .+= 𝒫(dagger(s1.Htint[d][i]), s2.Htext[d][i]).data;
+        end
         H.data .+= Ht .+ Ht';
     end
     hermitianize!(H);
 
-    J = [𝒫1(s1.J[i]) for i in 1:length(s1.J)] ∪ [𝒫2(s2.J[i]) for i in 1:length(s2.J)]
+    J = [[𝒫1(s1.J[i]) for i in 1:length(s1.J)]; [𝒫2(s2.J[i]) for i in 1:length(s2.J)]]
 
     #return H
     d⊥ = [_d for _d in 1:N if _d!= d]
