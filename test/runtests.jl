@@ -146,7 +146,7 @@ using Test, InteractiveUtils
     @test all([getfield(s1.lattice,f) == getfield(s2.lattice,f) for f in fieldnames(typeof(s1.lattice))])
     tol = 1e-12
     @test norm(eigvals(Matrix(s1.H.data)) .- eigvals(Matrix(s2.H.data))) < tol
-    @test all([norm(eigvals(Matrix((dagger(s1.J[i]) * s1.J[i]).data)) .- eigvals(Matrix((dagger(s2.J[i]) * s2.J[i]).data))) < tol for i in 1:8])
+    @test all([norm(eigvals(Matrix(CornerSpaceRenorm.hermitianize(dagger(s1.J[i]) * s1.J[i]).data)) .- eigvals(Matrix((dagger(s2.J[i]) * s2.J[i]).data))) < tol for i in 1:8])
 
     # Check steady states
     ρ1 = steadystate.master(s1.H,s1.J)[2][end]
