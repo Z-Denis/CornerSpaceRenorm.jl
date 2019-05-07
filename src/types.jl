@@ -282,6 +282,7 @@ struct ZnSystem{N,L<:ZnLattice{N},B<:Basis,
     gbasis::B
     # Operators
     H::O1
+    trate::Tuple{Vararg{ComplexF64,N}}
     Htint::Tuple{Vararg{Vector{O2},N}}
     Htext::Tuple{Vararg{Vector{O2},N}}
     J::Vector{O3}
@@ -302,7 +303,7 @@ Liouvillian. Can be a `Dict{String,<local operator type>}` of local operators or
 an array of `nv(lat)` `Dict{String,<global operator type>}`s of operators in the
 global basis.
 """
-function ZnSystem(lat::ZnLattice{M},H::O1,lHt::O2,J::Vector{O3},obs::Union{Vector{Dict{String,O4}},Missing}=missing) where {M,N,L<:Lattice,LB<:Basis,
+function ZnSystem(lat::ZnLattice{M},H::O1,trate::Tuple{Vararg{Number,M}},lHt::O2,J::Vector{O3},obs::Union{Vector{Dict{String,O4}},Missing}=missing) where {M,N,L<:Lattice,LB<:Basis,
                                                        B<:CompositeBasis{Tuple{Vararg{LB,N}}},
                                                        O1<:AbstractOperator{B,B},
                                                        O2<:AbstractOperator{LB,LB},
@@ -314,17 +315,18 @@ function ZnSystem(lat::ZnLattice{M},H::O1,lHt::O2,J::Vector{O3},obs::Union{Vecto
     @assert H.basis_r == H.basis_l == gbasis
     @assert first(J).basis_l == gbasis
     @assert first(J).basis_r == gbasis
+    _trate::Tuple{Vararg{ComplexF64,M}} = Tuple(ComplexF64.(collect(trate)))
     Htint = Tuple([[embed(gbasis,v,lHt) for v in lat.Vint[d]] for d in 1:M])
     Htext = Tuple([[embed(gbasis,v,lHt) for v in lat.Vext[d]] for d in 1:M])
 
     if ismissing(obs)
-        return ZnSystem{M,ZnLattice{M},B,O1,eltype(first(Htint)),O3,typeof(H)}(lat,gbasis,H,Htint,Htext,J,[Dict{String,typeof(H)}() for i in 1:nv(lat)])
+        return ZnSystem{M,ZnLattice{M},B,O1,eltype(first(Htint)),O3,typeof(H)}(lat,gbasis,H,_trate,Htint,Htext,J,[Dict{String,typeof(H)}() for i in 1:nv(lat)])
     else
-        return ZnSystem{M,ZnLattice{M},B,O1,eltype(first(Htint)),O3,O4}(lat,gbasis,H,Htint,Htext,J,obs)
+        return ZnSystem{M,ZnLattice{M},B,O1,eltype(first(Htint)),O3,O4}(lat,gbasis,H,_trate,Htint,Htext,J,obs)
     end
 end
 
-function ZnSystem(lat::ZnLattice{M},H::O1,lHt::O2,J::Vector{O3},lobs::Dict{String,O4}) where {M,N,L<:Lattice,LB<:Basis,
+function ZnSystem(lat::ZnLattice{M},H::O1,trate::Tuple{Vararg{Number,M}},lHt::O2,J::Vector{O3},lobs::Dict{String,O4}) where {M,N,L<:Lattice,LB<:Basis,
                                                        B<:CompositeBasis{Tuple{Vararg{LB,N}}},
                                                        O1<:AbstractOperator{B,B},
                                                        O2<:AbstractOperator{LB,LB},
@@ -332,7 +334,7 @@ function ZnSystem(lat::ZnLattice{M},H::O1,lHt::O2,J::Vector{O3},lobs::Dict{Strin
                                                        O4<:AbstractOperator{LB,LB}}
     gbasis = H.basis_l;
     obs = [Dict([name => embed(gbasis,i,lop) for (name,lop) in lobs]) for i in 1:nv(lat)]
-    return ZnSystem(lat,H,lHt,J,obs)
+    return ZnSystem(lat,H,Tuple(ComplexF64.(collect(trate))),lHt,J,obs)
 end
 
 GraphPlot.gplot(s::AbstractSystem; kwargs...) = GraphPlot.gplot(s.lattice.L; kwargs...)

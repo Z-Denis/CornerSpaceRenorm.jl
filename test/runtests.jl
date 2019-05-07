@@ -98,7 +98,7 @@ using Test, InteractiveUtils
     # Test ZnLattice and ZnSystem
     # Check equivalence with SquareLattice
     ZnL = ZnLattice((2,2))
-    s3 = ZnSystem(ZnL,H,destroy(lb),J)
+    s3 = ZnSystem(ZnL,H,(1.,1.),destroy(lb),J)
     ρ3 = steadystate.master(s3.H,s3.J)[2][end]
     s3 = merge(s3,s3,1,ρ3,ρ3,10)
     ρ3 = steadystate.master(s3.H,s3.J)[2][end]
@@ -132,19 +132,20 @@ using Test, InteractiveUtils
     L1 = ZnLattice((2,2); periodic=true)
     H1 = hamiltonian(L1,(g/2)*sx,[tH])
     J1 = dissipators(L1,[sqrt(2gamma) * sm])
-    s1 = ZnSystem(L1,H1,sqrt(V/4)*sz,J1,lobs)
+    s1 = ZnSystem(L1,H1,(V/4,V/4),sz,J1,lobs)
     ρ1 = steadystate.master(s1.H,s1.J)[2][end]
     s1 = merge(s1,s1,1,ρ1,ρ1,256)
 
     L2 = union(L1,L1,1)
     H2 = hamiltonian(L2,(g/2)*sx,[tH])
     J2 = dissipators(L2,[sqrt(2gamma) * sm])
-    s2 = ZnSystem(L2,H2,sqrt(V/4)*sz,J2,lobs)
+    s2 = ZnSystem(L2,H2,(V/4,V/4),sz,J2,lobs)
 
     # Compare systems
     @test typeof(s1.lattice) == typeof(s2.lattice)
     @test all([getfield(s1.lattice,f) == getfield(s2.lattice,f) for f in fieldnames(typeof(s1.lattice))])
     tol = 1e-12
+
     @test norm(eigvals(Matrix(s1.H.data)) .- eigvals(Matrix(s2.H.data))) < tol
     @test all([norm(eigvals(Matrix(CornerSpaceRenorm.hermitianize(dagger(s1.J[i]) * s1.J[i]).data)) .- eigvals(Matrix((dagger(s2.J[i]) * s2.J[i]).data))) < tol for i in 1:8])
 
@@ -163,8 +164,8 @@ using Test, InteractiveUtils
     # Test constructor with local observables
     O = randoperator(lb)
     lobs = Dict("O"=>O)
-    s1 = ZnSystem(ZnL,H,destroy(lb),J,lobs)
+    s1 = ZnSystem(ZnL,H,(1.,1.),destroy(lb),J,lobs)
     gobs = [Dict("O"=>embed(s1.gbasis, i, O)) for i in vertices(ZnL)]
-    s2 = ZnSystem(ZnL,H,destroy(lb),J,gobs)
+    s2 = ZnSystem(ZnL,H,(1.,1.),destroy(lb),J,gobs)
     @test s1.observables == s2.observables
 end
