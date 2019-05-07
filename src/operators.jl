@@ -28,6 +28,33 @@ function hamiltonian(L::Lattice, lH::AbstractOperator{B,B}, tH::Vector{Tuple{Var
     return H;
 end
 
+function hamiltonian(L::Lattice, lH::Vector{Tuple{T,O1}}, tH::Vector{Tuple{T,O2}}) where {T<:Number,B<:Basis,O1<:AbstractOperator{B,B},O2<:AbstractOperator{B,B}}
+    @assert length(unique([lH[i][2].basis_l for i in 1:length(lH)])) == 1 "Local Hamiltonian terms must share a common Basis."
+    gbasis = CompositeBasis([first(lH)[2].basis_l for i in 1:nv(L)]...);
+    H = begin
+            if all([typeof(lH[i][2]) <: SparseOperator for i in 1:length(lH)]) &&
+               all([typeof(tH[i][2]) <: SparseOperator for i in 1:length(tH)])
+                SparseOperator(gbasis);
+            else
+                DenseOperator(gbasis);
+            end
+        end
+
+    for e in edges(L)
+        for i in 1:length(tH)
+            H.data .+= tH[i][1] * embed(gbasis,[e.src, e.dst],[tH[i][2]; dagger(tH[i][2])]).data;
+        end
+    end
+    H.data .= H.data + H.data';
+
+    @inbounds for i in 1:length(lH)
+        for v in vertices(L)
+            H.data .+= lH[i][1] * embed(gbasis, v, lH[i][2]).data;
+        end
+    end
+    return H;
+end
+
 #hamiltonian(s::System) = hamiltonian(s.lattice, s.lH, [s.tH])
 
 """
