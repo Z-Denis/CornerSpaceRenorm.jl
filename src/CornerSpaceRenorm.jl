@@ -9,4 +9,6 @@ include("operators.jl");
 export hamiltonian, dissipators
 include("corner.jl")
 export corner_subspace, cornerize, vmerge, hmerge
+include("steadystate.jl")
+export steadystate_bicg
 end # module
