@@ -55,8 +55,6 @@ function hamiltonian(L::Lattice, lH::Vector{Tuple{T,O1}}, tH::Vector{Tuple{T,O2}
     return H;
 end
 
-#hamiltonian(s::System) = hamiltonian(s.lattice, s.lH, [s.tH])
-
 """
     dissipators(L, J)
 
@@ -69,5 +67,3 @@ function dissipators(L::Lattice, J::Vector{O}) where {B<:Basis,O<:AbstractOperat
     gbasis = CompositeBasis([first(J).basis_l for i in 1:nv(L)]...);
     return vcat([[embed(gbasis, v, J[i]) for i in 1:length(J)] for v in vertices(L)]...)
 end
-
-#dissipators(s::System) = dissipators(s.lattice, s.J)

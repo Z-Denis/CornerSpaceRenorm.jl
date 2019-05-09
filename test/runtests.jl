@@ -95,10 +95,10 @@ using Test, InteractiveUtils
     @test maximum([maximum(abs2.(s1.Htleft[i].data .- s2.Htleft[i].data)) for i in 1:length(s1.Htleft)]) < tol
     @test maximum([maximum(abs2.(s1.Htright[i].data .- s2.Htright[i].data)) for i in 1:length(s1.Htright)]) < tol
 
-    # Test ZnLattice and ZnSystem
+    # Test NdLattice and NdSystem
     # Check equivalence with SquareLattice
-    ZnL = ZnLattice((2,2))
-    s3 = ZnSystem(ZnL,H,(1.,1.),destroy(lb),J)
+    NdL = NdLattice((2,2))
+    s3 = NdSystem(NdL,H,(1.,1.),destroy(lb),J)
     ρ3 = steadystate.master(s3.H,s3.J)[2][end]
     s3 = merge(s3,s3,1,ρ3,ρ3,10)
     ρ3 = steadystate.master(s3.H,s3.J)[2][end]
@@ -129,17 +129,17 @@ using Test, InteractiveUtils
     V = 2. /2.
     tH = (V/4 * sz,sz)
 
-    L1 = ZnLattice((2,2); periodic=true)
+    L1 = NdLattice((2,2); periodic=true)
     H1 = hamiltonian(L1,(g/2)*sx,[tH])
     J1 = dissipators(L1,[sqrt(2gamma) * sm])
-    s1 = ZnSystem(L1,H1,(V/4,V/4),sz,J1,lobs)
+    s1 = NdSystem(L1,H1,(V/4,V/4),sz,J1,lobs)
     ρ1 = steadystate.master(s1.H,s1.J)[2][end]
     s1 = merge(s1,s1,1,ρ1,ρ1,256)
 
     L2 = union(L1,L1,1)
     H2 = hamiltonian(L2,(g/2)*sx,[tH])
     J2 = dissipators(L2,[sqrt(2gamma) * sm])
-    s2 = ZnSystem(L2,H2,(V/4,V/4),sz,J2,lobs)
+    s2 = NdSystem(L2,H2,(V/4,V/4),sz,J2,lobs)
 
     # Compare systems
     @test typeof(s1.lattice) == typeof(s2.lattice)
@@ -164,8 +164,8 @@ using Test, InteractiveUtils
     # Test constructor with local observables
     O = randoperator(lb)
     lobs = Dict("O"=>O)
-    s1 = ZnSystem(ZnL,H,(1.,1.),destroy(lb),J,lobs)
-    gobs = [Dict("O"=>embed(s1.gbasis, i, O)) for i in vertices(ZnL)]
-    s2 = ZnSystem(ZnL,H,(1.,1.),destroy(lb),J,gobs)
+    s1 = NdSystem(NdL,H,(1.,1.),destroy(lb),J,lobs)
+    gobs = [Dict("O"=>embed(s1.gbasis, i, O)) for i in vertices(NdL)]
+    s2 = NdSystem(NdL,H,(1.,1.),destroy(lb),J,gobs)
     @test s1.observables == s2.observables
 end

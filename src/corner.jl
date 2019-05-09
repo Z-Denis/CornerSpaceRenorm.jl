@@ -527,16 +527,16 @@ end
 """
     merge(s1, s2, d, ρ1, ρ2, M)
 
-Merge two `ZnSystem`s along the `d`-th direction with corner compression.
+Merge two `NdSystem`s along the `d`-th direction with corner compression.
 # Arguments
-* `s1`: `ZnSystem`.
-* `s2`: `ZnSystem`.
+* `s1`: `NdSystem`.
+* `s2`: `NdSystem`.
 * `d`: merging direction.
 * `ρ1`: state of the system `s1`.
 * `ρ2`: state of the system `s2`.
 * `M`: corner dimension.
 """
-function Base.merge(s1::ZnSystem{N},s2::ZnSystem{N},d::Integer,ρ1::DenseOperator{B1,B1},ρ2::DenseOperator{B2,B2},M::Int) where {N,B1<:Basis,B2<:Basis}
+function Base.merge(s1::NdSystem{N},s2::NdSystem{N},d::Integer,ρ1::DenseOperator{B1,B1},ρ2::DenseOperator{B2,B2},M::Int) where {N,B1<:Basis,B2<:Basis}
     # TO DO: tests
     @assert s1.lattice.pbc == s2.lattice.pbc "Cannot merge systems with periodic and open open boundary conditions."
     lattice = union(s1.lattice,s2.lattice,d)
@@ -663,5 +663,5 @@ function Base.merge(s1::ZnSystem{N},s2::ZnSystem{N},d::Integer,ρ1::DenseOperato
         end
     end
 
-    return ZnSystem{N,typeof(lattice),typeof(gbasis),typeof(H),eltype(first(Htint)),eltype(J),typeof(H)}(lattice,gbasis,H,s1.trate,Tuple(Htint),Tuple(Htext),J,obs)
+    return NdSystem{N,typeof(lattice),typeof(gbasis),typeof(H),eltype(first(Htint)),eltype(J),typeof(H)}(lattice,gbasis,H,s1.trate,Tuple(Htint),Tuple(Htext),J,obs)
 end

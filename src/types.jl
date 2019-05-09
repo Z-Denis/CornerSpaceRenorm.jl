@@ -45,11 +45,11 @@ function SquareLattice(nx::Integer,ny::Integer;periodic::Bool = false)
 end
 
 """
-    ZnLattice{N} <: Lattice
+    NdLattice{N} <: Lattice
 
 Z^`N` lattice type. Generic lattice with `N` directions.
 """
-struct ZnLattice{N} <: Lattice
+struct NdLattice{N} <: Lattice
     L::SimpleGraph{Int64}
     shape::Tuple{Vararg{Int,N}}
 
@@ -61,17 +61,17 @@ struct ZnLattice{N} <: Lattice
 end
 
 """
-    ZnLattice(shape; periodic = false)
+    NdLattice(shape; periodic = false)
 
-Construct an `N`-dimensional cubic lattice of type `ZnLattice{N}`.
+Construct an `N`-dimensional cubic lattice of type `NdLattice{N}`.
 
 # Arguments
 * `shape`: Tuple of sizes of all dimensions `(nx, ny, ...)`.
 """
-function ZnLattice(shape::Tuple{Vararg{Int,N}};periodic::Bool = false) where N
+function NdLattice(shape::Tuple{Vararg{Int,N}};periodic::Bool = false) where N
     @assert N > 0 "The lattice must be positive-dimensional."
     if N == 1
-        return ZnLattice{1}(Grid(collect(shape);periodic=periodic),shape,([1],),([shape[end]],),periodic)
+        return NdLattice{1}(Grid(collect(shape);periodic=periodic),shape,([1],),([shape[end]],),periodic)
     else
         L = Grid(collect(shape);periodic=periodic);
         lids = LinearIndices(shape)
@@ -80,7 +80,7 @@ function ZnLattice(shape::Tuple{Vararg{Int,N}};periodic::Bool = false) where N
         symbids = [:end;fill(:(:), N-1)]
         Vext = Tuple([Core.eval(Main,Expr(:ref, :($lids), circshift(symbids,d)...))[:] for d in 0:N-1])
 
-        return ZnLattice{N}(L,shape,Vint,Vext,periodic)
+        return NdLattice{N}(L,shape,Vint,Vext,periodic)
     end
 end
 
@@ -151,7 +151,7 @@ function hunion(L1::SquareLattice,L2::SquareLattice)
                                              L1.Vleft, nv(L1).+L2.Vright)
 end
 
-function rem_boundaries!(L::ZnLattice{N}, d::Int) where N
+function rem_boundaries!(L::NdLattice{N}, d::Int) where N
     if L.pbc == true && L.shape[d] > 2
         eb = [e for e in edges(L) if e.src ∈ L.Vint[d] && e.dst ∈ L.Vext[d]]
         for e in eb
@@ -161,7 +161,7 @@ function rem_boundaries!(L::ZnLattice{N}, d::Int) where N
     return L
 end
 
-function add_boundaries!(L::ZnLattice{N}, d::Int) where N
+function add_boundaries!(L::NdLattice{N}, d::Int) where N
     if L.pbc == true
         for i in 1:length(L.Vext[d])
             add_edge!(L.L,Edge(L.Vext[d][i],L.Vint[d][i]))
@@ -172,9 +172,9 @@ end
 """
     union(L1, L2, d)
 
-Merge two `ZnLattice{N}`s along the `d`-th dimension.
+Merge two `NdLattice{N}`s along the `d`-th dimension.
 """
-function Base.union(L1::ZnLattice{N},L2::ZnLattice{N},d::Int) where N
+function Base.union(L1::NdLattice{N},L2::NdLattice{N},d::Int) where N
     @assert d <= N "Merging direction should be smaller than that of the lattices."
     @assert length(L1.Vext[d]) == length(L2.Vint[d]) "Lattices cannot be merged in this direction."
     @assert L1.pbc == L2.pbc "Cannot merge a periodic and an open lattices together."
@@ -200,7 +200,7 @@ function Base.union(L1::ZnLattice{N},L2::ZnLattice{N},d::Int) where N
         Vext[_d] = [L1.Vext[_d]; nv(L1) .+ L2.Vext[_d]]
     end
 
-    lat = ZnLattice{N}(L,Tuple(shape),Tuple(Vint),Tuple(Vext),pbc)
+    lat = NdLattice{N}(L,Tuple(shape),Tuple(Vint),Tuple(Vext),pbc)
     # Add edges between boundaries if periodic
     add_boundaries!(lat, d)
 end
@@ -269,11 +269,11 @@ function System(lat::L,H::O1,lHt::O2,J::Vector{O3},obs::Union{Vector{Dict{String
 end
 
 """
-    ZnSystem <: AbstractSystem
+    NdSystem <: AbstractSystem
 
-Quantum dissipative system defined on a `ZnLattice`.
+Quantum dissipative system defined on a `NdLattice`.
 """
-struct ZnSystem{N,L<:ZnLattice{N},B<:Basis,
+struct NdSystem{N,L<:NdLattice{N},B<:Basis,
                 O1<:AbstractOperator{B,B},O2<:AbstractOperator{B,B},
                 O3<:AbstractOperator{B,B},O4<:AbstractOperator{B,B}} <: AbstractSystem
     # Lattice
@@ -290,11 +290,11 @@ struct ZnSystem{N,L<:ZnLattice{N},B<:Basis,
 end
 
 """
-    ZnSystem(lat, H, lHt, J, obs)
+    NdSystem(lat, H, lHt, J, obs)
 
-Construct a `ZnSystem` from a `ZnLattice` and operators defining the model.
+Construct a `NdSystem` from a `NdLattice` and operators defining the model.
 # Arguments
-* `lat`: `ZnLattice`.
+* `lat`: `NdLattice`.
 * `H`: Hamiltonian of the full system.
 * `lHt`: local tunneling operator.
 * `J`: jump operators of the full system.
@@ -303,7 +303,7 @@ Liouvillian. Can be a `Dict{String,<local operator type>}` of local operators or
 an array of `nv(lat)` `Dict{String,<global operator type>}`s of operators in the
 global basis.
 """
-function ZnSystem(lat::ZnLattice{M},H::O1,trate::Tuple{Vararg{Number,M}},lHt::O2,J::Vector{O3},obs::Union{Vector{Dict{String,O4}},Missing}=missing) where {M,N,L<:Lattice,LB<:Basis,
+function NdSystem(lat::NdLattice{M},H::O1,trate::Tuple{Vararg{Number,M}},lHt::O2,J::Vector{O3},obs::Union{Vector{Dict{String,O4}},Missing}=missing) where {M,N,L<:Lattice,LB<:Basis,
                                                        B<:CompositeBasis{Tuple{Vararg{LB,N}}},
                                                        O1<:AbstractOperator{B,B},
                                                        O2<:AbstractOperator{LB,LB},
@@ -320,13 +320,13 @@ function ZnSystem(lat::ZnLattice{M},H::O1,trate::Tuple{Vararg{Number,M}},lHt::O2
     Htext = Tuple([[embed(gbasis,v,lHt) for v in lat.Vext[d]] for d in 1:M])
 
     if ismissing(obs)
-        return ZnSystem{M,ZnLattice{M},B,O1,eltype(first(Htint)),O3,typeof(H)}(lat,gbasis,H,_trate,Htint,Htext,J,[Dict{String,typeof(H)}() for i in 1:nv(lat)])
+        return NdSystem{M,NdLattice{M},B,O1,eltype(first(Htint)),O3,typeof(H)}(lat,gbasis,H,_trate,Htint,Htext,J,[Dict{String,typeof(H)}() for i in 1:nv(lat)])
     else
-        return ZnSystem{M,ZnLattice{M},B,O1,eltype(first(Htint)),O3,O4}(lat,gbasis,H,_trate,Htint,Htext,J,obs)
+        return NdSystem{M,NdLattice{M},B,O1,eltype(first(Htint)),O3,O4}(lat,gbasis,H,_trate,Htint,Htext,J,obs)
     end
 end
 
-function ZnSystem(lat::ZnLattice{M},H::O1,trate::Tuple{Vararg{Number,M}},lHt::O2,J::Vector{O3},lobs::Dict{String,O4}) where {M,N,L<:Lattice,LB<:Basis,
+function NdSystem(lat::NdLattice{M},H::O1,trate::Tuple{Vararg{Number,M}},lHt::O2,J::Vector{O3},lobs::Dict{String,O4}) where {M,N,L<:Lattice,LB<:Basis,
                                                        B<:CompositeBasis{Tuple{Vararg{LB,N}}},
                                                        O1<:AbstractOperator{B,B},
                                                        O2<:AbstractOperator{LB,LB},
@@ -334,7 +334,7 @@ function ZnSystem(lat::ZnLattice{M},H::O1,trate::Tuple{Vararg{Number,M}},lHt::O2
                                                        O4<:AbstractOperator{LB,LB}}
     gbasis = H.basis_l;
     obs = [Dict([name => embed(gbasis,i,lop) for (name,lop) in lobs]) for i in 1:nv(lat)]
-    return ZnSystem(lat,H,Tuple(ComplexF64.(collect(trate))),lHt,J,obs)
+    return NdSystem(lat,H,Tuple(ComplexF64.(collect(trate))),lHt,J,obs)
 end
 
 GraphPlot.gplot(s::AbstractSystem; kwargs...) = GraphPlot.gplot(s.lattice.L; kwargs...)
