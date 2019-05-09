@@ -213,11 +213,11 @@ Abstract supertype for all systems.
 abstract type AbstractSystem end
 
 """
-    System <: AbstractSystem
+    SquareSystem <: AbstractSystem
 
 Quantum dissipative system defined on a square lattice.
 """
-struct System{L<:Lattice,B<:Basis,
+struct SquareSystem{L<:SquareLattice,B<:Basis,
               O1<:AbstractOperator{B,B},O2<:AbstractOperator{B,B},
               O3<:AbstractOperator{B,B},O4<:AbstractOperator{B,B}} <: AbstractSystem
     # Lattice
@@ -235,16 +235,16 @@ struct System{L<:Lattice,B<:Basis,
 end
 
 """
-    System(lat, H, lHt, J)
+    SquareSystem(lat, H, lHt, J)
 
-Construct a `System` from a `Lattice` and operators defining the model.
+Construct a `SquareSystem` from a `Lattice` and operators defining the model.
 # Arguments
 * `lat`: `Lattice`.
 * `H`: Hamiltonian of the full system.
 * `lHt`: local tunneling operator.
 * `J`: jump operators of the full system.
 """
-function System(lat::L,H::O1,lHt::O2,J::Vector{O3},obs::Union{Vector{Dict{String,O4}},Missing}=missing) where {N,L<:Lattice,LB<:Basis,
+function SquareSystem(lat::SquareLattice,H::O1,lHt::O2,J::Vector{O3},obs::Union{Vector{Dict{String,O4}},Missing}=missing) where {N,L<:Lattice,LB<:Basis,
                                                        B<:CompositeBasis{Tuple{Vararg{LB,N}}},
                                                        O1<:AbstractOperator{B,B},
                                                        O2<:AbstractOperator{LB,LB},
@@ -262,9 +262,9 @@ function System(lat::L,H::O1,lHt::O2,J::Vector{O3},obs::Union{Vector{Dict{String
     Htleft   = [embed(gbasis,[i],[lHt]) for i in lat.Vleft]
     Htright  = [embed(gbasis,[i],[lHt]) for i in lat.Vright]
     if ismissing(obs)
-        return System{L,B,O1,eltype(Httop),O3,typeof(H)}(lat,gbasis,H,Httop,Htbottom,Htleft,Htright,J,[Dict{String,typeof(H)}() for i in 1:nv(lat)])
+        return SquareSystem{L,B,O1,eltype(Httop),O3,typeof(H)}(lat,gbasis,H,Httop,Htbottom,Htleft,Htright,J,[Dict{String,typeof(H)}() for i in 1:nv(lat)])
     else
-        return System{L,B,O1,eltype(Httop),O3,O4}(lat,gbasis,H,Httop,Htbottom,Htleft,Htright,J,obs)
+        return SquareSystem{L,B,O1,eltype(Httop),O3,O4}(lat,gbasis,H,Httop,Htbottom,Htleft,Htright,J,obs)
     end
 end
 
@@ -290,12 +290,13 @@ struct NdSystem{N,L<:NdLattice{N},B<:Basis,
 end
 
 """
-    NdSystem(lat, H, lHt, J, obs)
+    NdSystem(lat, H, trate, lHt, J, obs)
 
 Construct a `NdSystem` from a `NdLattice` and operators defining the model.
 # Arguments
-* `lat`: `NdLattice`.
+* `lat`: `NdLattice{N}`.
 * `H`: Hamiltonian of the full system.
+* `trate`: N-`Tuple` of tunneling rates along each dimension.
 * `lHt`: local tunneling operator.
 * `J`: jump operators of the full system.
 * `obs`: Observables to be transformed to the corner space together with the
@@ -303,7 +304,7 @@ Liouvillian. Can be a `Dict{String,<local operator type>}` of local operators or
 an array of `nv(lat)` `Dict{String,<global operator type>}`s of operators in the
 global basis.
 """
-function NdSystem(lat::NdLattice{M},H::O1,trate::Tuple{Vararg{Number,M}},lHt::O2,J::Vector{O3},obs::Union{Vector{Dict{String,O4}},Missing}=missing) where {M,N,L<:Lattice,LB<:Basis,
+function NdSystem(lat::NdLattice{M},H::O1,trate::Tuple{Vararg{Number,Q}},lHt::O2,J::Vector{O3},obs::Union{Vector{Dict{String,O4}},Missing}=missing) where {M,N,Q,L<:Lattice,LB<:Basis,
                                                        B<:CompositeBasis{Tuple{Vararg{LB,N}}},
                                                        O1<:AbstractOperator{B,B},
                                                        O2<:AbstractOperator{LB,LB},
@@ -311,6 +312,7 @@ function NdSystem(lat::NdLattice{M},H::O1,trate::Tuple{Vararg{Number,M}},lHt::O2
                                                        O4<:AbstractOperator{B,B}}
     gbasis = H.basis_l;
     @assert nv(lat) == length(gbasis.bases)
+    @assert Q == M
     @assert lHt.basis_l == first(gbasis.bases)
     @assert H.basis_r == H.basis_l == gbasis
     @assert first(J).basis_l == gbasis
@@ -326,13 +328,14 @@ function NdSystem(lat::NdLattice{M},H::O1,trate::Tuple{Vararg{Number,M}},lHt::O2
     end
 end
 
-function NdSystem(lat::NdLattice{M},H::O1,trate::Tuple{Vararg{Number,M}},lHt::O2,J::Vector{O3},lobs::Dict{String,O4}) where {M,N,L<:Lattice,LB<:Basis,
+function NdSystem(lat::NdLattice{M},H::O1,trate::Tuple{Vararg{Number,Q}},lHt::O2,J::Vector{O3},lobs::Dict{String,O4}) where {M,N,Q,L<:Lattice,LB<:Basis,
                                                        B<:CompositeBasis{Tuple{Vararg{LB,N}}},
                                                        O1<:AbstractOperator{B,B},
                                                        O2<:AbstractOperator{LB,LB},
                                                        O3<:AbstractOperator{B,B},
                                                        O4<:AbstractOperator{LB,LB}}
     gbasis = H.basis_l;
+    @assert Q == M
     obs = [Dict([name => embed(gbasis,i,lop) for (name,lop) in lobs]) for i in 1:nv(lat)]
     return NdSystem(lat,H,Tuple(ComplexF64.(collect(trate))),lHt,J,obs)
 end

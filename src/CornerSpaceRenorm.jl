@@ -4,7 +4,7 @@ using QuantumOptics
 include("types.jl");
 export AbstractLattice, Lattice, SquareLattice, NdLattice
 export eltype, vertices, edges, nv, ne, has_edge, has_vertex, outneighbors, is_directed, extsites, vunion, hunion, plot_system
-export AbstractSystem, System, NdSystem
+export AbstractSystem, SquareSystem, NdSystem
 include("operators.jl");
 export hamiltonian, dissipators
 include("corner.jl")

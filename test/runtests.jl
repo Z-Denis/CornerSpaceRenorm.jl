@@ -28,7 +28,7 @@ using Test, InteractiveUtils
 
     # TO DO: find a way to compare outputs
     #@test gplot(L) == gplot(L.L)
-    #s = System(L,H,destroy(lb),J)
+    #s = SquareSystem(L,H,destroy(lb),J)
     #@test plot_system(s) == gplot(s.lattice.L)
 
     # Test merging
@@ -57,11 +57,11 @@ using Test, InteractiveUtils
     s2 =  hunion(L1,L2)
     compare_systems(s1,s2)
 
-    s1 = System(L,H,destroy(lb),J)
+    s1 = SquareSystem(L,H,destroy(lb),J)
     s1 = vmerge(s1,s1)
     s1 = hmerge(s1,s1)
 
-    s2 = System(L,H,destroy(lb),J)
+    s2 = SquareSystem(L,H,destroy(lb),J)
     s2 = vmerge(s2,s2)
     s2 = hmerge(s2,s2)
 
@@ -69,7 +69,7 @@ using Test, InteractiveUtils
 
     # Test cornerized merging
     # Dumb version
-    s1 = System(L,H,destroy(lb),J)
+    s1 = SquareSystem(L,H,destroy(lb),J)
     ρ1 = steadystate.master(s1.H,s1.J)[2][end]
     s1 = vmerge(s1,s1)
     cspace = corner_subspace(ρ1,ρ1,10)[1]
@@ -80,7 +80,7 @@ using Test, InteractiveUtils
     s1 = cornerize(s1,cspace)
 
     # Wise version
-    s2 = System(L,H,destroy(lb),J)
+    s2 = SquareSystem(L,H,destroy(lb),J)
     ρ2 = steadystate.master(s2.H,s2.J)[2][end]
     s2 = vmerge(s2,s2,ρ2,ρ2,10)
     ρ2 = steadystate.master(s2.H,s2.J)[2][end]

@@ -157,10 +157,10 @@ end
 
 Project a system into a given corner space.
 # Arguments
-* `s`: `System`.
+* `s`: `SquareSystem`.
 * `cspace`: `SubspaceBasis` of the corner.
 """
-function cornerize(s::AbstractSystem,cspace::SubspaceBasis)
+function cornerize(s::SquareSystem,cspace::SubspaceBasis)
     P = projector(cspace,s.gbasis);
     Pd = dagger(P);
     proj(op) = P*op*Pd;
@@ -171,18 +171,18 @@ function cornerize(s::AbstractSystem,cspace::SubspaceBasis)
     Htright = proj.(s.Htright);
     J = proj.(s.J);
     obs = [Dict([name => proj(lop) for (name,lop) in s.observables[i]]) for i in 1:nv(s.lattice)]
-    return System{typeof(s.lattice),typeof(cspace),typeof(H),eltype(Httop),eltype(J),typeof(H)}(s.lattice,cspace,H,Httop,Htbottom,Htleft,Htright,J,obs)
+    return SquareSystem{typeof(s.lattice),typeof(cspace),typeof(H),eltype(Httop),eltype(J),typeof(H)}(s.lattice,cspace,H,Httop,Htbottom,Htleft,Htright,J,obs)
 end
 
 """
     merge(s1, s2)
 
-Merge two `System`s along some compatible dimension with no corner compression.
+Merge two `SquareSystem`s along some compatible dimension with no corner compression.
 # Arguments
-* `s1`: `System`.
-* `s2`: `System`.
+* `s1`: `SquareSystem`.
+* `s2`: `SquareSystem`.
 """
-function merge(s1::AbstractSystem,s2::AbstractSystem)
+function merge(s1::SquareSystem,s2::SquareSystem)
     if s1.lattice.ny == s2.lattice.ny
         return vmerge(s1,s2)
     elseif s1.lattice.ny == s2.lattice.ny
@@ -195,12 +195,12 @@ end
 """
     vmerge(s1, s2)
 
-Merge two `System`s vertically with no corner compression.
+Merge two `SquareSystem`s vertically with no corner compression.
 # Arguments
-* `s1`: `System`.
-* `s2`: `System`.
+* `s1`: `SquareSystem`.
+* `s2`: `SquareSystem`.
 """
-function vmerge(s1::AbstractSystem,s2::AbstractSystem)
+function vmerge(s1::SquareSystem,s2::SquareSystem)
     # TO DO: tests
     lattice = vunion(s1.lattice,s2.lattice)
     Id1 = one(s1.gbasis)
@@ -231,18 +231,18 @@ function vmerge(s1::AbstractSystem,s2::AbstractSystem)
             obs[length(s1.observables)+i][k] = Id1 ⊗ s2.observables[i][k]
         end
     end
-    return System{typeof(lattice),typeof(gbasis),typeof(H),eltype(Httop),eltype(J),typeof(H)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J,obs)
+    return SquareSystem{typeof(lattice),typeof(gbasis),typeof(H),eltype(Httop),eltype(J),typeof(H)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J,obs)
 end
 
 """
     vmerge(s1, s2)
 
-Merge two `System`s horizontally with no corner compression.
+Merge two `SquareSystem`s horizontally with no corner compression.
 # Arguments
-* `s1`: `System`.
-* `s2`: `System`.
+* `s1`: `SquareSystem`.
+* `s2`: `SquareSystem`.
 """
-function hmerge(s1::AbstractSystem,s2::AbstractSystem)
+function hmerge(s1::SquareSystem,s2::SquareSystem)
     # TO DO: tests
     lattice = hunion(s1.lattice,s2.lattice)
     Id1 = one(s1.gbasis)
@@ -273,7 +273,7 @@ function hmerge(s1::AbstractSystem,s2::AbstractSystem)
             obs[length(s1.observables)+i][k] = Id1 ⊗ s2.observables[i][k]
         end
     end
-    return System{typeof(lattice),typeof(gbasis),typeof(H),eltype(Httop),eltype(J),typeof(H)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J,obs)
+    return SquareSystem{typeof(lattice),typeof(gbasis),typeof(H),eltype(Httop),eltype(J),typeof(H)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J,obs)
 end
 
 """
@@ -314,15 +314,15 @@ end
 """
     merge(s1, s2, ρ1, ρ2, M)
 
-Merge two `System`s along some compatible dimension with corner compression.
+Merge two `SquareSystem`s along some compatible dimension with corner compression.
 # Arguments
-* `s1`: `System`.
-* `s2`: `System`.
+* `s1`: `SquareSystem`.
+* `s2`: `SquareSystem`.
 * `ρ1`: state of the system `s1`.
 * `ρ2`: state of the system `s2`.
 * `M`: corner dimension.
 """
-function Base.merge(s1::AbstractSystem,s2::AbstractSystem,ρ1::DenseOperator{B1,B1},ρ2::DenseOperator{B2,B2},M::Int) where {B1<:Basis,B2<:Basis}
+function Base.merge(s1::SquareSystem,s2::SquareSystem,ρ1::DenseOperator{B1,B1},ρ2::DenseOperator{B2,B2},M::Int) where {B1<:Basis,B2<:Basis}
     # TO DO: add tests on M
     if s1.lattice.ny == s2.lattice.ny
         return vmerge(s1,s2,ρ1,ρ2,M)
@@ -336,15 +336,15 @@ end
 """
     vmerge(s1, s2, ρ1, ρ2, M)
 
-Merge two `System`s vertically along some compatible dimension with corner compression.
+Merge two `SquareSystem`s vertically along some compatible dimension with corner compression.
 # Arguments
-* `s1`: `System`.
-* `s2`: `System`.
+* `s1`: `SquareSystem`.
+* `s2`: `SquareSystem`.
 * `ρ1`: state of the system `s1`.
 * `ρ2`: state of the system `s2`.
 * `M`: corner dimension.
 """
-function vmerge(s1::AbstractSystem,s2::AbstractSystem,ρ1::DenseOperator{B1,B1},ρ2::DenseOperator{B2,B2},M::Int) where {B1<:Basis,B2<:Basis}
+function vmerge(s1::SquareSystem,s2::SquareSystem,ρ1::DenseOperator{B1,B1},ρ2::DenseOperator{B2,B2},M::Int) where {B1<:Basis,B2<:Basis}
     # TO DO: tests
     lattice = vunion(s1.lattice,s2.lattice)
 
@@ -426,21 +426,21 @@ function vmerge(s1::AbstractSystem,s2::AbstractSystem,ρ1::DenseOperator{B1,B1},
         end
     end
 
-    return System{typeof(lattice),typeof(gbasis),typeof(H),eltype(Httop),eltype(J),typeof(H)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J,obs)
+    return SquareSystem{typeof(lattice),typeof(gbasis),typeof(H),eltype(Httop),eltype(J),typeof(H)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J,obs)
 end
 
 """
     hmerge(s1, s2, ρ1, ρ2, M)
 
-Merge two `System`s horizontally along some compatible dimension with corner compression.
+Merge two `SquareSystem`s horizontally along some compatible dimension with corner compression.
 # Arguments
-* `s1`: `System`.
-* `s2`: `System`.
+* `s1`: `SquareSystem`.
+* `s2`: `SquareSystem`.
 * `ρ1`: state of the system `s1`.
 * `ρ2`: state of the system `s2`.
 * `M`: corner dimension.
 """
-function hmerge(s1::AbstractSystem,s2::AbstractSystem,ρ1::DenseOperator{B1,B1},ρ2::DenseOperator{B2,B2},M::Int) where {B1<:Basis,B2<:Basis}
+function hmerge(s1::SquareSystem,s2::SquareSystem,ρ1::DenseOperator{B1,B1},ρ2::DenseOperator{B2,B2},M::Int) where {B1<:Basis,B2<:Basis}
     # TO DO: tests
     lattice = hunion(s1.lattice,s2.lattice)
 
@@ -521,7 +521,7 @@ function hmerge(s1::AbstractSystem,s2::AbstractSystem,ρ1::DenseOperator{B1,B1},
         end
     end
 
-    return System{typeof(lattice),typeof(gbasis),typeof(H),eltype(Httop),eltype(J),typeof(H)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J,obs)
+    return SquareSystem{typeof(lattice),typeof(gbasis),typeof(H),eltype(Httop),eltype(J),typeof(H)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J,obs)
 end
 
 """
