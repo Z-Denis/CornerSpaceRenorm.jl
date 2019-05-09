@@ -11,7 +11,7 @@ the square of the size of the Hilbert space.
 
 # Arguments
 * `H`: dense Hamiltonian.
-* `J`: array of dense jump operators..
+* `J`: array of dense jump operators.
 * `l`: number of GMRES steps per iteration.
 
 See also: [`CornerSpaceRenorm.steadystate_bicg_LtL`](@ref)
@@ -61,6 +61,22 @@ function steadystate_bicg(H::DenseOperator{B,B}, J::Vector{O}, l::Int=2; log::Bo
     end
 end
 
+"""
+    steadystate_bicg(s, l=2; [log=false], kwargs...) -> rho[, log]
+
+Compute the steady state density matrix of an `AbstractSystem` by solving
+`L rho = 0` via the stabilized biconjugate gradient method.
+The first line of the Liouvillian is overwritten to enforce a non-trivial trace
+one solution, this approximation yields an error of the order of the inverse of
+the square of the size of the Hilbert space.
+
+# Arguments
+* `s`: Instance of any subtype of `AbstractSystem`.
+* `l`: number of GMRES steps per iteration.
+
+See also: [`CornerSpaceRenorm.steadystate_bicg_LtL`](@ref)
+"""
+steadystate_bicg(s::AbstractSystem, l::Int=2; log::Bool=false, kwargs...) = steadystate_bicg(s.H, s.J, l; log=log, kwargs...)
 
 """
     CornerSpaceRenorm.steadystate_bicg_LtL(H, J, l=2; [log=false], kwargs...) -> rho[, log]
@@ -72,7 +88,7 @@ to enfore the trace one but convergence is slower and poorer.
 
 # Arguments
 * `H`: dense Hamiltonian.
-* `J`: array of dense jump operators..
+* `J`: array of dense jump operators.
 * `l`: number of GMRES steps per iteration.
 
 See also: [`steadystate_bicg`](@ref)
@@ -136,3 +152,31 @@ function steadystate_bicg_LtL(H::DenseOperator{B,B}, J::Vector{O}, l::Int=2; log
         return DenseOperator(H.basis_l, reshape(R,(M,M))), history
     end
 end
+
+
+"""
+    CornerSpaceRenorm.steadystate_bicg_LtL(s, l=2; [log=false], kwargs...) -> rho[, log]
+
+Compute the steady state density matrix of an `AbstractSystem` by solving
+`<L,L(rho)> + <tr,rho> tr = tr` via the stabilized biconjugate gradient method.
+No approximation of the Liovillian is made in order to enfore the trace one but
+convergence is slower and poorer.
+
+# Arguments
+* `s`: Instance of any subtype of `AbstractSystem`.
+* `l`: number of GMRES steps per iteration.
+
+See also: [`steadystate_bicg`](@ref)
+"""
+steadystate_bicg_LtL(s::AbstractSystem, l::Int=2; log::Bool=false, kwargs...) = steadystate_bicg_LtL(s.H, s.J, l; log=log, kwargs...)
+
+"""
+    steadystate.master(s; <keyword arguments>)
+
+Calculate steady state using long time master equation evolution.
+
+# Arguments
+* `s`: Instance of any subtype of `AbstractSystem`.
+* `kwargs...`: see the main method docstring.
+"""
+QuantumOptics.steadystate.master(s::AbstractSystem; kwargs...) = QuantumOptics.steadystate.master(s.H, s.J; kwargs...)
