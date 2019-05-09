@@ -22,6 +22,8 @@ struct SquareLattice <: Lattice
     Vbottom::Vector{Int64}
     Vleft::Vector{Int64}
     Vright::Vector{Int64}
+
+    pbc::Bool
 end
 
 """
@@ -41,7 +43,7 @@ function SquareLattice(nx::Integer,ny::Integer;periodic::Bool = false)
     Vbottom = [V[nx*i] for i in 1:ny];
     Vleft   = V[1:nx];
     Vright  = V[end-nx+1:end];
-    return SquareLattice(L,nx,ny,Vtop,Vbottom,Vleft,Vright)
+    return SquareLattice(L,nx,ny,Vtop,Vbottom,Vleft,Vright,periodic)
 end
 
 """
@@ -110,12 +112,13 @@ GraphPlot.gplot(L::Lattice, locs_x_in::Vector{R}, locs_y_in::Vector{R}; kwargs..
 Merge two `SquareLattice`s along some compatible dimension.
 """
 function Base.:union(L1::SquareLattice,L2::SquareLattice)
+    @assert L1.pbc == L2.pbc "Cannot merge lattices with different boundary conditions."
     if L1.ny == L2.ny
         return vunion(L1,L2)
     elseif L1.nx == L2.nx
         return hunion(L1,L2)
     else
-        error("Incompatible lattice sizes: ($(L1.nx),$(L1.ny)) and ($(L2.nx),$(L2.ny))")
+        throw(DimensionMismatch("Incompatible lattice sizes: ($(L1.nx),$(L1.ny)) and ($(L2.nx),$(L2.ny))"))
     end
 end
 
@@ -124,7 +127,9 @@ end
 
 Merge two `SquareLattice`s `L1` and `L2` vertically.
 """
-function vunion(L1::Lattice,L2::Lattice)
+function vunion(L1::SquareLattice,L2::SquareLattice)
+    L1.ny == L2.ny || throw(DimensionMismatch("Incompatible lattice sizes: ($(L1.nx),$(L1.ny)) and ($(L2.nx),$(L2.ny))"))
+    @assert L1.pbc == L2.pbc "Cannot merge lattices with different boundary conditions."
     L = blockdiag(L1.L,L2.L);
     for i in 1:L1.ny
         add_edge!(L,Edge(L1.Vbottom[i],nv(L1)+L2.Vtop[i]))
@@ -132,7 +137,8 @@ function vunion(L1::Lattice,L2::Lattice)
 
     return SquareLattice(L,L1.nx+L2.nx,L1.ny,L1.Vtop, nv(L1).+L2.Vbottom,
                                              L1.Vleft ∪ (nv(L1).+L2.Vleft),
-                                             L1.Vright ∪ (nv(L1).+L2.Vright))
+                                             L1.Vright ∪ (nv(L1).+L2.Vright),
+                                             L1.pbc)
 end
 
 """
@@ -141,6 +147,8 @@ end
 Merge two `SquareLattice`s `L1` and `L2` horizontally.
 """
 function hunion(L1::SquareLattice,L2::SquareLattice)
+    L1.nx == L2.nx || throw(DimensionMismatch("Incompatible lattice sizes: ($(L1.nx),$(L1.ny)) and ($(L2.nx),$(L2.ny))"))
+    @assert L1.pbc == L2.pbc "Cannot merge lattices with different boundary conditions."
     L = blockdiag(L1.L,L2.L);
     for i in 1:L1.nx
         add_edge!(L,Edge(L1.Vright[i],nv(L1)+L2.Vleft[i]))
@@ -148,7 +156,7 @@ function hunion(L1::SquareLattice,L2::SquareLattice)
 
     return SquareLattice(L,L1.nx,L1.ny+L2.ny,L1.Vtop ∪ (nv(L1).+L2.Vtop),
                                              L1.Vbottom ∪ (nv(L1).+L2.Vbottom),
-                                             L1.Vleft, nv(L1).+L2.Vright)
+                                             L1.Vleft, nv(L1).+L2.Vright, L1.pbc)
 end
 
 function rem_boundaries!(L::NdLattice{N}, d::Int) where N
@@ -176,7 +184,7 @@ Merge two `NdLattice{N}`s along the `d`-th dimension.
 """
 function Base.union(L1::NdLattice{N},L2::NdLattice{N},d::Int) where N
     @assert d <= N "Merging direction should be smaller than that of the lattices."
-    @assert length(L1.Vext[d]) == length(L2.Vint[d]) "Lattices cannot be merged in this direction."
+    length(L1.Vext[d]) == length(L2.Vint[d]) || throw(DimensionMismatch("Lattices cannot be merged in this direction."))
     @assert L1.pbc == L2.pbc "Cannot merge a periodic and an open lattices together."
     L1 = deepcopy(L1)
     L2 = deepcopy(L2)
@@ -217,11 +225,11 @@ abstract type AbstractSystem end
 
 Quantum dissipative system defined on a square lattice.
 """
-struct SquareSystem{L<:SquareLattice,B<:Basis,
+struct SquareSystem{B<:Basis,
               O1<:AbstractOperator{B,B},O2<:AbstractOperator{B,B},
               O3<:AbstractOperator{B,B},O4<:AbstractOperator{B,B}} <: AbstractSystem
     # Lattice
-    lattice::L
+    lattice::SquareLattice
     # Bases
     gbasis::B
     # Operators
@@ -262,10 +270,21 @@ function SquareSystem(lat::SquareLattice,H::O1,lHt::O2,J::Vector{O3},obs::Union{
     Htleft   = [embed(gbasis,[i],[lHt]) for i in lat.Vleft]
     Htright  = [embed(gbasis,[i],[lHt]) for i in lat.Vright]
     if ismissing(obs)
-        return SquareSystem{L,B,O1,eltype(Httop),O3,typeof(H)}(lat,gbasis,H,Httop,Htbottom,Htleft,Htright,J,[Dict{String,typeof(H)}() for i in 1:nv(lat)])
+        return SquareSystem{B,O1,eltype(Httop),O3,typeof(H)}(lat,gbasis,H,Httop,Htbottom,Htleft,Htright,J,[Dict{String,typeof(H)}() for i in 1:nv(lat)])
     else
-        return SquareSystem{L,B,O1,eltype(Httop),O3,O4}(lat,gbasis,H,Httop,Htbottom,Htleft,Htright,J,obs)
+        return SquareSystem{B,O1,eltype(Httop),O3,O4}(lat,gbasis,H,Httop,Htbottom,Htleft,Htright,J,obs)
     end
+end
+
+function SquareSystem(lat::SquareLattice,H::O1,lHt::O2,J::Vector{O3},lobs::Dict{String,O4}) where {N,LB<:Basis,
+                                                       B<:CompositeBasis{Tuple{Vararg{LB,N}}},
+                                                       O1<:AbstractOperator{B,B},
+                                                       O2<:AbstractOperator{LB,LB},
+                                                       O3<:AbstractOperator{B,B},
+                                                       O4<:AbstractOperator{LB,LB}}
+    gbasis = H.basis_l;
+    obs = [Dict([name => embed(gbasis,i,lop) for (name,lop) in lobs]) for i in 1:nv(lat)]
+    return SquareSystem(lat,H,lHt,J,obs)
 end
 
 """
@@ -304,7 +323,7 @@ Liouvillian. Can be a `Dict{String,<local operator type>}` of local operators or
 an array of `nv(lat)` `Dict{String,<global operator type>}`s of operators in the
 global basis.
 """
-function NdSystem(lat::NdLattice{M},H::O1,trate::Tuple{Vararg{Number,Q}},lHt::O2,J::Vector{O3},obs::Union{Vector{Dict{String,O4}},Missing}=missing) where {M,N,Q,L<:Lattice,LB<:Basis,
+function NdSystem(lat::NdLattice{M},H::O1,trate::Tuple{Vararg{Number,Q}},lHt::O2,J::Vector{O3},obs::Union{Vector{Dict{String,O4}},Missing}=missing) where {M,N,Q,LB<:Basis,
                                                        B<:CompositeBasis{Tuple{Vararg{LB,N}}},
                                                        O1<:AbstractOperator{B,B},
                                                        O2<:AbstractOperator{LB,LB},
@@ -312,11 +331,10 @@ function NdSystem(lat::NdLattice{M},H::O1,trate::Tuple{Vararg{Number,Q}},lHt::O2
                                                        O4<:AbstractOperator{B,B}}
     gbasis = H.basis_l;
     @assert nv(lat) == length(gbasis.bases)
-    @assert Q == M
-    @assert lHt.basis_l == first(gbasis.bases)
+    @assert Q == M "Number of tunnellingrates must match number of dimensions"
+    @assert lHt.basis_l == first(gbasis.bases) "Global basis of H must match the local basis of lHt"
     @assert H.basis_r == H.basis_l == gbasis
-    @assert first(J).basis_l == gbasis
-    @assert first(J).basis_r == gbasis
+    @assert first(J).basis_l == first(J).basis_r == gbasis
     _trate::Tuple{Vararg{ComplexF64,M}} = Tuple(ComplexF64.(collect(trate)))
     Htint = Tuple([[embed(gbasis,v,lHt) for v in lat.Vint[d]] for d in 1:M])
     Htext = Tuple([[embed(gbasis,v,lHt) for v in lat.Vext[d]] for d in 1:M])
@@ -328,7 +346,7 @@ function NdSystem(lat::NdLattice{M},H::O1,trate::Tuple{Vararg{Number,Q}},lHt::O2
     end
 end
 
-function NdSystem(lat::NdLattice{M},H::O1,trate::Tuple{Vararg{Number,Q}},lHt::O2,J::Vector{O3},lobs::Dict{String,O4}) where {M,N,Q,L<:Lattice,LB<:Basis,
+function NdSystem(lat::NdLattice{M},H::O1,trate::Tuple{Vararg{Number,Q}},lHt::O2,J::Vector{O3},lobs::Dict{String,O4}) where {M,N,Q,LB<:Basis,
                                                        B<:CompositeBasis{Tuple{Vararg{LB,N}}},
                                                        O1<:AbstractOperator{B,B},
                                                        O2<:AbstractOperator{LB,LB},

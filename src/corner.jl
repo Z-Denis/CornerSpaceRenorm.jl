@@ -171,7 +171,7 @@ function cornerize(s::SquareSystem,cspace::SubspaceBasis)
     Htright = proj.(s.Htright);
     J = proj.(s.J);
     obs = [Dict([name => proj(lop) for (name,lop) in s.observables[i]]) for i in 1:nv(s.lattice)]
-    return SquareSystem{typeof(s.lattice),typeof(cspace),typeof(H),eltype(Httop),eltype(J),typeof(H)}(s.lattice,cspace,H,Httop,Htbottom,Htleft,Htright,J,obs)
+    return SquareSystem{typeof(cspace),typeof(H),eltype(Httop),eltype(J),typeof(H)}(s.lattice,cspace,H,Httop,Htbottom,Htleft,Htright,J,obs)
 end
 
 """
@@ -182,13 +182,13 @@ Merge two `SquareSystem`s along some compatible dimension with no corner compres
 * `s1`: `SquareSystem`.
 * `s2`: `SquareSystem`.
 """
-function merge(s1::SquareSystem,s2::SquareSystem)
+function Base.merge(s1::SquareSystem,s2::SquareSystem)
     if s1.lattice.ny == s2.lattice.ny
         return vmerge(s1,s2)
     elseif s1.lattice.ny == s2.lattice.ny
         return hmerge(s1,s2)
     else
-        error("Systems have incompatible lattice sizes: ($(s1.lattice.nx),$(s1.lattice.ny)) and ($(s2.lattice.nx),$(s2.lattice.ny))")
+        throw(DimensionMismatch("Systems have incompatible lattice sizes: ($(s1.lattice.nx),$(s1.lattice.ny)) and ($(s2.lattice.nx),$(s2.lattice.ny))"))
     end
 end
 
@@ -231,7 +231,7 @@ function vmerge(s1::SquareSystem,s2::SquareSystem)
             obs[length(s1.observables)+i][k] = Id1 ⊗ s2.observables[i][k]
         end
     end
-    return SquareSystem{typeof(lattice),typeof(gbasis),typeof(H),eltype(Httop),eltype(J),typeof(H)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J,obs)
+    return SquareSystem{typeof(gbasis),typeof(H),eltype(Httop),eltype(J),typeof(H)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J,obs)
 end
 
 """
@@ -273,7 +273,7 @@ function hmerge(s1::SquareSystem,s2::SquareSystem)
             obs[length(s1.observables)+i][k] = Id1 ⊗ s2.observables[i][k]
         end
     end
-    return SquareSystem{typeof(lattice),typeof(gbasis),typeof(H),eltype(Httop),eltype(J),typeof(H)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J,obs)
+    return SquareSystem{typeof(gbasis),typeof(H),eltype(Httop),eltype(J),typeof(H)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J,obs)
 end
 
 """
@@ -329,7 +329,7 @@ function Base.merge(s1::SquareSystem,s2::SquareSystem,ρ1::DenseOperator{B1,B1},
     elseif s1.lattice.ny == s2.lattice.ny
         return hmerge(s1,s2,ρ1,ρ2,M)
     else
-        error("Systems have incompatible lattice sizes: ($(s1.lattice.nx),$(s1.lattice.ny)) and ($(s2.lattice.nx),$(s2.lattice.ny))")
+        throw(DimensionMismatch("Systems have incompatible lattice sizes: ($(s1.lattice.nx),$(s1.lattice.ny)) and ($(s2.lattice.nx),$(s2.lattice.ny))"))
     end
 end
 
@@ -346,6 +346,7 @@ Merge two `SquareSystem`s vertically along some compatible dimension with corner
 """
 function vmerge(s1::SquareSystem,s2::SquareSystem,ρ1::DenseOperator{B1,B1},ρ2::DenseOperator{B2,B2},M::Int) where {B1<:Basis,B2<:Basis}
     # TO DO: tests
+    s1.lattice.ny == s2.lattice.ny || throw(DimensionMismatch("Systems have incompatible lattice sizes: ($(s1.lattice.nx),$(s1.lattice.ny)) and ($(s2.lattice.nx),$(s2.lattice.ny))"))
     lattice = vunion(s1.lattice,s2.lattice)
 
     bC, handles, ϕs_1, ϕs_2 = corner_subspace(ρ1,ρ2,M)
@@ -426,7 +427,7 @@ function vmerge(s1::SquareSystem,s2::SquareSystem,ρ1::DenseOperator{B1,B1},ρ2:
         end
     end
 
-    return SquareSystem{typeof(lattice),typeof(gbasis),typeof(H),eltype(Httop),eltype(J),typeof(H)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J,obs)
+    return SquareSystem{typeof(gbasis),typeof(H),eltype(Httop),eltype(J),typeof(H)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J,obs)
 end
 
 """
@@ -442,6 +443,7 @@ Merge two `SquareSystem`s horizontally along some compatible dimension with corn
 """
 function hmerge(s1::SquareSystem,s2::SquareSystem,ρ1::DenseOperator{B1,B1},ρ2::DenseOperator{B2,B2},M::Int) where {B1<:Basis,B2<:Basis}
     # TO DO: tests
+    s1.lattice.nx == s2.lattice.nx || throw(DimensionMismatch("Systems have incompatible lattice sizes: ($(s1.lattice.nx),$(s1.lattice.ny)) and ($(s2.lattice.nx),$(s2.lattice.ny))"))
     lattice = hunion(s1.lattice,s2.lattice)
 
     bC, handles, ϕs_1, ϕs_2 = corner_subspace(ρ1,ρ2,M)
@@ -521,7 +523,7 @@ function hmerge(s1::SquareSystem,s2::SquareSystem,ρ1::DenseOperator{B1,B1},ρ2:
         end
     end
 
-    return SquareSystem{typeof(lattice),typeof(gbasis),typeof(H),eltype(Httop),eltype(J),typeof(H)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J,obs)
+    return SquareSystem{typeof(gbasis),typeof(H),eltype(Httop),eltype(J),typeof(H)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J,obs)
 end
 
 """
@@ -538,6 +540,7 @@ Merge two `NdSystem`s along the `d`-th direction with corner compression.
 """
 function Base.merge(s1::NdSystem{N},s2::NdSystem{N},d::Integer,ρ1::DenseOperator{B1,B1},ρ2::DenseOperator{B2,B2},M::Int) where {N,B1<:Basis,B2<:Basis}
     # TO DO: tests
+    length(s1.lattice.Vext[d]) == length(s2.lattice.Vint[d]) || throw(DimensionMismatch("Lattices cannot be merged in this direction."))
     @assert s1.lattice.pbc == s2.lattice.pbc "Cannot merge systems with periodic and open open boundary conditions."
     lattice = union(s1.lattice,s2.lattice,d)
 

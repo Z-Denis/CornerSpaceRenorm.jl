@@ -76,7 +76,7 @@ the square of the size of the Hilbert space.
 
 See also: [`CornerSpaceRenorm.steadystate_bicg_LtL`](@ref)
 """
-steadystate_bicg(s::AbstractSystem, l::Int=2; log::Bool=false, kwargs...) = steadystate_bicg(s.H, s.J, l; log=log, kwargs...)
+steadystate_bicg(s::AbstractSystem, l::Int=2; log::Bool=false, kwargs...) = steadystate_bicg(DenseOperator(s.H), DenseOperator.(s.J), l; log=log, kwargs...)
 
 """
     CornerSpaceRenorm.steadystate_bicg_LtL(H, J, l=2; [log=false], kwargs...) -> rho[, log]
@@ -168,7 +168,7 @@ convergence is slower and poorer.
 
 See also: [`steadystate_bicg`](@ref)
 """
-steadystate_bicg_LtL(s::AbstractSystem, l::Int=2; log::Bool=false, kwargs...) = steadystate_bicg_LtL(s.H, s.J, l; log=log, kwargs...)
+steadystate_bicg_LtL(s::AbstractSystem, l::Int=2; log::Bool=false, kwargs...) = steadystate_bicg_LtL(DenseOperator(s.H), DenseOperator.(s.J), l; log=log, kwargs...)
 
 """
     steadystate.master(s; <keyword arguments>)
