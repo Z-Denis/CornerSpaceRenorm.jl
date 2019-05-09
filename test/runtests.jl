@@ -238,6 +238,25 @@ using Test, InteractiveUtils
             @test_skip gplot(L) == gplot(L.L)
             @test_skip plot_system(s) == gplot(s.lattice.L)
 
+            # Broken: cannot construct a system with 1 site.
+
+            # Simpler constructor for homogeneous coupling
+            L = NdLattice((2,1,1,1))
+            H = hamiltonian(L, [(g/2, sx)], [(V/4, sz)])
+            J = dissipators(L, [sqrt(2gamma) * sm])
+            s1 = NdSystem(L, H, V/4, sz, J, lobs)
+            s2 = NdSystem(L, H, Tuple([V/4 for i in 1:4]), sz, J, lobs)
+            for f in fieldnames(typeof(s1))
+                if f == :lattice
+                    L1 = getfield(s1,f)
+                    L2 = getfield(s2,f)
+                    for ff in fieldnames(typeof(L1))
+                        @test getfield(L1,ff) == getfield(L2,ff)
+                    end
+                else
+                    @test getfield(s1,f) == getfield(s2,f)
+                end
+            end
 
             # Test construction and merging
             # 1D

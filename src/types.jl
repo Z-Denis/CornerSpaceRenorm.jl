@@ -315,7 +315,7 @@ Construct a `NdSystem` from a `NdLattice` and operators defining the model.
 # Arguments
 * `lat`: `NdLattice{N}`.
 * `H`: Hamiltonian of the full system.
-* `trate`: N-`Tuple` of tunneling rates along each dimension.
+* `trate`: tunneling rate or N-`Tuple` of tunneling rates along each dimension.
 * `lHt`: local tunneling operator.
 * `J`: jump operators of the full system.
 * `obs`: Observables to be transformed to the corner space together with the
@@ -331,7 +331,7 @@ function NdSystem(lat::NdLattice{M},H::O1,trate::Tuple{Vararg{Number,Q}},lHt::O2
                                                        O4<:AbstractOperator{B,B}}
     gbasis = H.basis_l;
     @assert nv(lat) == length(gbasis.bases)
-    @assert Q == M "Number of tunnellingrates must match number of dimensions"
+    @assert Q == M "Number of tunnelling rates must match number of dimensions"
     @assert lHt.basis_l == first(gbasis.bases) "Global basis of H must match the local basis of lHt"
     @assert H.basis_r == H.basis_l == gbasis
     @assert first(J).basis_l == first(J).basis_r == gbasis
@@ -346,6 +346,15 @@ function NdSystem(lat::NdLattice{M},H::O1,trate::Tuple{Vararg{Number,Q}},lHt::O2
     end
 end
 
+function NdSystem(lat::NdLattice{M},H::O1,trate::Tuple{Vararg{Number,Q}},lHt::O2,J::Vector{O3},obs::Union{Vector{Dict{String,O4}},Missing}=missing) where {M,N,LB<:Basis,
+                                                       B<:CompositeBasis{Tuple{Vararg{LB,N}}},
+                                                       O1<:AbstractOperator{B,B},
+                                                       O2<:AbstractOperator{LB,LB},
+                                                       O3<:AbstractOperator{B,B},
+                                                       O4<:AbstractOperator{B,B}}
+    return NdSystem(lat,H,Tuple([trate for i in 1:M]),lHt,J,obs)
+end
+
 function NdSystem(lat::NdLattice{M},H::O1,trate::Tuple{Vararg{Number,Q}},lHt::O2,J::Vector{O3},lobs::Dict{String,O4}) where {M,N,Q,LB<:Basis,
                                                        B<:CompositeBasis{Tuple{Vararg{LB,N}}},
                                                        O1<:AbstractOperator{B,B},
@@ -353,9 +362,18 @@ function NdSystem(lat::NdLattice{M},H::O1,trate::Tuple{Vararg{Number,Q}},lHt::O2
                                                        O3<:AbstractOperator{B,B},
                                                        O4<:AbstractOperator{LB,LB}}
     gbasis = H.basis_l;
-    @assert Q == M
+    @assert Q == M "Number of rates must match number of dimensions."
     obs = [Dict([name => embed(gbasis,i,lop) for (name,lop) in lobs]) for i in 1:nv(lat)]
     return NdSystem(lat,H,Tuple(ComplexF64.(collect(trate))),lHt,J,obs)
+end
+
+function NdSystem(lat::NdLattice{M},H::O1,trate::Number,lHt::O2,J::Vector{O3},lobs::Dict{String,O4}) where {M,N,LB<:Basis,
+                                                       B<:CompositeBasis{Tuple{Vararg{LB,N}}},
+                                                       O1<:AbstractOperator{B,B},
+                                                       O2<:AbstractOperator{LB,LB},
+                                                       O3<:AbstractOperator{B,B},
+                                                       O4<:AbstractOperator{LB,LB}}
+    return NdSystem(lat,H,Tuple([trate for i in 1:M]),lHt,J,lobs)
 end
 
 GraphPlot.gplot(s::AbstractSystem; kwargs...) = GraphPlot.gplot(s.lattice.L; kwargs...)
