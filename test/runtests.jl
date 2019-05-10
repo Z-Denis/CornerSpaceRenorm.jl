@@ -4,6 +4,20 @@ using LinearAlgebra, IterativeSolvers, Random
 using Test, InteractiveUtils
 
 @testset "CornerSpaceRenorm" begin
+    @testset "Operators" begin
+        lb = FockBasis(1)
+        lH = randoperator(lb)
+        tH = randoperator(lb)
+
+        for pbc in [true, false]
+            L = NdLattice((3,2,1);periodic=false)
+            H1 = hamiltonian(L,lH,(1.,1.,1.),tH)
+            H2 = hamiltonian(L,lH,(1.,tH))
+            H3 = hamiltonian(L,lH,1.,tH)
+            @test maximum(abs2.(H1.data .- H2.data)) ≈ 0. atol=eps(Float64)
+            @test maximum(abs2.(H1.data .- H3.data)) ≈ 0. atol=eps(Float64)
+        end
+    end;
 
     @testset "Types" begin
         @testset "SquareLattice" begin
@@ -147,7 +161,7 @@ using Test, InteractiveUtils
 
             # Test assertions in constructors
             L = SquareLattice(4,1)
-            H = hamiltonian(L, [(g/2, sx)], [(V/4, sz)])
+            H = hamiltonian(L, g/2 * sx, V/4, sz)
             J = dissipators(L, [sqrt(2gamma) * sm])
             # Incompatible lattice
             L_err = SquareLattice(5,1)
@@ -167,14 +181,14 @@ using Test, InteractiveUtils
             # Test construction and merging
             pbc = false
             L = SquareLattice(2,1; periodic=pbc)
-            H = hamiltonian(L, [(g/2, sx)], [(V/4, sz)])
+            H = hamiltonian(L, g/2 * sx, V/4, sz)
             J = dissipators(L, [sqrt(2gamma) * sm])
             s = SquareSystem(L, H, sqrt(V/4)*sz, J, lobs)
             s = hmerge(s,s)
             s = merge(s,s)
 
             L2 = SquareLattice(4,2; periodic=pbc)
-            H2 = hamiltonian(L2, [(g/2, sx)], [(V/4, sz)])
+            H2 = hamiltonian(L2, g/2 * sx, V/4, sz)
             J2 = dissipators(L2, [sqrt(2gamma) * sm])
             s2 = SquareSystem(L2, H2, sqrt(V/4)*sz, J2, lobs)
 
@@ -184,14 +198,14 @@ using Test, InteractiveUtils
 
             pbc = true
             L = SquareLattice(2,1; periodic=pbc)
-            H = hamiltonian(L, [(g/2, sx)], [(V/4, sz)])
+            H = hamiltonian(L, g/2 * sx, V/4, sz)
             J = dissipators(L, [sqrt(2gamma) * sm])
             s = SquareSystem(L, H, sqrt(V/4)*sz, J, lobs)
             s = hmerge(s,s)
             s = merge(s,s)
 
             L2 = SquareLattice(4,2; periodic=pbc)
-            H2 = hamiltonian(L2, [(g/2, sx)], [(V/4, sz)])
+            H2 = hamiltonian(L2, g/2 * sx, V/4, sz)
             J2 = dissipators(L2, [sqrt(2gamma) * sm])
             s2 = SquareSystem(L2, H2, sqrt(V/4)*sz, J2, lobs)
 
@@ -220,7 +234,7 @@ using Test, InteractiveUtils
 
             # Test assertions in constructors
             L = NdLattice((4,))
-            H = hamiltonian(L, [(g/2, sx)], [(V/4, sz)])
+            H = hamiltonian(L, g/2 * sx, V/4, sz)
             J = dissipators(L, [sqrt(2gamma) * sm])
             # Incompatible lattice
             L_err = NdLattice((5,))
@@ -255,7 +269,7 @@ using Test, InteractiveUtils
             end
             # Simpler constructor for homogeneous coupling
             L = NdLattice((2,1,1,1))
-            H = hamiltonian(L, [(g/2, sx)], [(V/4, sz)])
+            H = hamiltonian(L, g/2 * sx, V/4, sz)
             J = dissipators(L, [sqrt(2gamma) * sm])
             s1 = NdSystem(L, H, V/4, sz, J, lobs)
             s2 = NdSystem(L, H, Tuple([V/4 for i in 1:4]), sz, J, lobs)
@@ -268,14 +282,14 @@ using Test, InteractiveUtils
             # 1D
             for pbc in [true, false]
                 L = NdLattice((4,); periodic=pbc)
-                H = hamiltonian(L, [(g/2, sx)], [(V/4, sz)])
+                H = hamiltonian(L, g/2 * sx, V/4, sz)
                 J = dissipators(L, [sqrt(2gamma) * sm])
                 s = NdSystem(L, H, (V/4,), sz, J, lobs)
                 ρ = steadystate.master(s)[2][end]
                 sUs = merge(s,s,1,ρ,ρ,256)
 
                 L2 = NdLattice((8,); periodic=pbc)
-                H2 = hamiltonian(L2, [(g/2, sx)], [(V/4, sz)])
+                H2 = hamiltonian(L2, g/2 * sx, V/4, sz)
                 J2 = dissipators(L2, [sqrt(2gamma) * sm])
                 s2 = NdSystem(L2, H2, (V/4,), sz, J2, lobs)
 
@@ -290,14 +304,14 @@ using Test, InteractiveUtils
             # 2D
             for pbc in [true, false]
                 L = NdLattice((2,2); periodic=pbc)
-                H = hamiltonian(L, [(g/2, sx)], [(V/4, sz)])
+                H = hamiltonian(L, g/2 * sx, V/4, sz)
                 J = dissipators(L, [sqrt(2gamma) * sm])
                 s = NdSystem(L, H, (V/4, V/4), sz, J, lobs)
                 ρ = steadystate.master(s)[2][end]
                 sUs = merge(s,s,2,ρ,ρ,256)
 
                 L2 = NdLattice((2,4); periodic=pbc)
-                H2 = hamiltonian(L2, [(g/2, sx)], [(V/4, sz)])
+                H2 = hamiltonian(L2, g/2 * sx, V/4, sz)
                 J2 = dissipators(L2, [sqrt(2gamma) * sm])
                 s2 = NdSystem(L2, H2, (V/4, V/4), sz, J2, lobs)
 
@@ -372,7 +386,7 @@ using Test, InteractiveUtils
                 V = 2/2.
 
                 L = SquareLattice(2,2)
-                H = hamiltonian(L, [(g/2, sx)], [(V/4, sz)])
+                H = hamiltonian(L, g/2 * sx, V/4, sz)
                 J = dissipators(L, [sqrt(2gamma) * sm])
 
                 # Test cornerized merging
@@ -404,12 +418,12 @@ using Test, InteractiveUtils
 
                 # Test assertions in merging methods
                 L1 = SquareLattice(2,1)
-                H1 = hamiltonian(L1, [(g/2, sx)], [(V/4, sz)])
+                H1 = hamiltonian(L1, g/2 * sx, V/4, sz)
                 J1 = dissipators(L1, [sqrt(2gamma) * sm])
                 s1 = SquareSystem(L1, H1, sqrt(V/4)*sz, J1, lobs)
                 ρ1 = steadystate.master(s1.H,s1.J)[2][end]
                 L2 = SquareLattice(1,2)
-                H2 = hamiltonian(L2, [(g/2, sx)], [(V/4, sz)])
+                H2 = hamiltonian(L2, g/2 * sx, V/4, sz)
                 J2 = dissipators(L2, [sqrt(2gamma) * sm])
                 s2 = SquareSystem(L2, H2, sqrt(V/4)*sz, J2, lobs)
                 ρ2 = steadystate.master(s2.H,s2.J)[2][end]
@@ -423,7 +437,7 @@ using Test, InteractiveUtils
 
                 # Full space corner vs exact system
                 L1 = SquareLattice(2,1)
-                H1 = hamiltonian(L1, [(g/2, sx)], [(V/4, sz)])
+                H1 = hamiltonian(L1, g/2 * sx, V/4, sz)
                 J1 = dissipators(L1, [sqrt(2gamma) * sm])
                 s1 = SquareSystem(L1, H1, sqrt(V/4)*sz, J1, lobs)
                 ρ1 = steadystate.master(s1.H,s1.J)[2][end]
@@ -431,7 +445,7 @@ using Test, InteractiveUtils
                 ρ1 = steadystate.master(s1.H,s1.J;tol=1e-5)[2][end]
 
                 L2 = SquareLattice(4,1)
-                H2 = hamiltonian(L2, [(g/2, sx)], [(V/4, sz)])
+                H2 = hamiltonian(L2, g/2 * sx, V/4, sz)
                 J2 = dissipators(L2, [sqrt(2gamma) * sm])
                 s2 = SquareSystem(L2, H2, sqrt(V/4)*sz, J2, lobs)
                 ρ2 = steadystate.master(s2.H,s2.J;tol=1e-5)[2][end]
@@ -460,12 +474,12 @@ using Test, InteractiveUtils
                 V = 2/2.
 
                 L1 = NdLattice((2,1))
-                H1 = hamiltonian(L1, [(g/2, sx)], [(V/4, sz)])
+                H1 = hamiltonian(L1, g/2 * sx, V/4, sz)
                 J1 = dissipators(L1, [sqrt(2gamma) * sm])
                 s1 = NdSystem(L1, H1, (V/4,V/4), sz, J1, lobs)
                 ρ1 = steadystate.master(s1.H,s1.J)[2][end]
                 L2 = NdLattice((1,2))
-                H2 = hamiltonian(L2, [(g/2, sx)], [(V/4, sz)])
+                H2 = hamiltonian(L2, g/2 * sx, V/4, sz)
                 J2 = dissipators(L2, [sqrt(2gamma) * sm])
                 s2 = NdSystem(L2, H2, (V/4,V/4), sz, J2, lobs)
                 ρ2 = steadystate.master(s2.H,s2.J)[2][end]
@@ -474,7 +488,7 @@ using Test, InteractiveUtils
                 @test_throws DimensionMismatch merge(s1, s2, 2, ρ1, ρ2, 2)
 
                 L1_pbc = NdLattice((2,1);periodic=true)
-                H1_pbc = hamiltonian(L1_pbc, [(g/2, sx)], [(V/4, sz)])
+                H1_pbc = hamiltonian(L1_pbc, g/2 * sx, V/4, sz)
                 J1_pbc = dissipators(L1_pbc, [sqrt(2gamma) * sm])
                 s1_pbc = NdSystem(L1_pbc, H1_pbc, (V/4,V/4), sz, J1_pbc, lobs)
                 ρ1_pbc = steadystate.master(s1_pbc.H,s1_pbc.J)[2][end]
@@ -485,7 +499,7 @@ using Test, InteractiveUtils
                 # 1D
                 for pbc in [true, false]
                     L1 = NdLattice((2,))
-                    H1 = hamiltonian(L1, [(g/2, sx)], [(V/4, sz)])
+                    H1 = hamiltonian(L1, g/2 * sx, V/4, sz)
                     J1 = dissipators(L1, [sqrt(2gamma) * sm])
                     s1 = NdSystem(L1, H1, (V/4,), sz, J1, lobs)
                     ρ1 = steadystate.master(s1.H,s1.J)[2][end]
@@ -493,7 +507,7 @@ using Test, InteractiveUtils
                     ρ1 = steadystate.master(s1.H,s1.J;tol=1e-5)[2][end]
 
                     L2 = NdLattice((4,))
-                    H2 = hamiltonian(L2, [(g/2, sx)], [(V/4, sz)])
+                    H2 = hamiltonian(L2, g/2 * sx, V/4, sz)
                     J2 = dissipators(L2, [sqrt(2gamma) * sm])
                     s2 = NdSystem(L2, H2, (V/4,), sz, J2, lobs)
                     ρ2 = steadystate.master(s2.H,s2.J;tol=1e-5)[2][end]
@@ -506,7 +520,7 @@ using Test, InteractiveUtils
                 # 2D
                 for pbc in [true, false]
                     L1 = NdLattice((2,1))
-                    H1 = hamiltonian(L1, [(g/2, sx)], [(V/4, sz)])
+                    H1 = hamiltonian(L1, g/2 * sx, V/4, sz)
                     J1 = dissipators(L1, [sqrt(2gamma) * sm])
                     s1 = NdSystem(L1, H1, (V/4,V/4), sz, J1, lobs)
                     ρ1 = steadystate.master(s1.H,s1.J)[2][end]
@@ -514,7 +528,7 @@ using Test, InteractiveUtils
                     ρ1 = steadystate.master(s1.H,s1.J;tol=1e-5)[2][end]
 
                     L2 = NdLattice((4,1))
-                    H2 = hamiltonian(L2, [(g/2, sx)], [(V/4, sz)])
+                    H2 = hamiltonian(L2, g/2 * sx, V/4, sz)
                     J2 = dissipators(L2, [sqrt(2gamma) * sm])
                     s2 = NdSystem(L2, H2, (V/4,V/4), sz, J2, lobs)
                     ρ2 = steadystate.master(s2.H,s2.J;tol=1e-5)[2][end]
@@ -546,7 +560,7 @@ using Test, InteractiveUtils
         V = 2/2.
 
         L1 = NdLattice((6,))
-        H1 = hamiltonian(L1, [(g/2, sx)], [(V/4, sz)])
+        H1 = hamiltonian(L1, g/2 * sx, V/4, sz)
         J1 = dissipators(L1, [sqrt(2gamma) * sm])
         s1 = NdSystem(L1, H1, (V/4,), sz, J1, lobs)
         ρ1 = steadystate.master(s1.H,s1.J; tol=1e-5)[2][end]
