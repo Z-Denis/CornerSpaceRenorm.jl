@@ -346,7 +346,7 @@ function NdSystem(lat::NdLattice{M},H::O1,trate::Tuple{Vararg{Number,Q}},lHt::O2
     end
 end
 
-function NdSystem(lat::NdLattice{M},H::O1,trate::Tuple{Vararg{Number,Q}},lHt::O2,J::Vector{O3},obs::Union{Vector{Dict{String,O4}},Missing}=missing) where {M,N,LB<:Basis,
+function NdSystem(lat::NdLattice{M},H::O1,trate::Number,lHt::O2,J::Vector{O3},obs::Union{Vector{Dict{String,O4}},Missing}=missing) where {M,N,LB<:Basis,
                                                        B<:CompositeBasis{Tuple{Vararg{LB,N}}},
                                                        O1<:AbstractOperator{B,B},
                                                        O2<:AbstractOperator{LB,LB},
