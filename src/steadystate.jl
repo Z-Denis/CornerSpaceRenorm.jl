@@ -73,6 +73,7 @@ the square of the size of the Hilbert space.
 # Arguments
 * `s`: Instance of any subtype of `AbstractSystem`.
 * `l`: number of GMRES steps per iteration.
+* `kwargs...`: Further arguments are passed on to the iterative solver.
 
 See also: [`CornerSpaceRenorm.steadystate_bicg_LtL`](@ref)
 """
@@ -90,6 +91,7 @@ to enfore the trace one but convergence is slower and poorer.
 * `H`: dense Hamiltonian.
 * `J`: array of dense jump operators.
 * `l`: number of GMRES steps per iteration.
+* `kwargs...`: Further arguments are passed on to the iterative solver.
 
 See also: [`steadystate_bicg`](@ref)
 """
