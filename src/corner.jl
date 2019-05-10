@@ -1,6 +1,47 @@
 using DataStructures, LinearAlgebra
 
 """
+    CornerSpaceRenorm.cgs(X)
+
+Apply the classical Gram-Schmidt orthogonalisation procedure to a set of vectors.
+Vectors are passed as columns of a dense matrix `X`.
+"""
+function cgs(X::Matrix{T}) where T <: Number
+    m, n = size(X);
+    V = copy(X);
+    Q = zeros(T, size(X));
+
+    @inbounds @views for j = 1:n
+        for k = 1:j-1
+            axpy!(-BLAS.dotc(m, Q[:,k], 1, V[:,j], 1), Q[:,k], V[:,j])
+        end
+        Q[:,j] .= V[:,j] ./ sqrt(BLAS.dotc(n, V[:,j], 1, V[:,j], 1));
+    end
+
+    return Q
+end
+
+"""
+    CornerSpaceRenorm.cgs!(X)
+
+In-place classical Gram-Schmidt orthogonalisation procedure.
+See also: [`CornerSpaceRenorm.cgs`](@ref)
+"""
+function cgs!(X::Matrix{T}) where T <: Number
+    m, n = size(X);
+    V = copy(X);
+
+    @inbounds @views for j = 1:n
+        for k = 1:j-1
+            axpy!(-BLAS.dotc(m, X[:,k], 1, V[:,j], 1), X[:,k], V[:,j])
+        end
+        X[:,j] .= V[:,j] ./ sqrt(BLAS.dotc(n, V[:,j], 1, V[:,j], 1));
+    end
+
+    return X
+end
+
+"""
     CornerSpaceRenorm.mgs(X)
 
 Apply the modified Gram-Schmidt orthogonalisation procedure to a set of vectors.
@@ -49,7 +90,7 @@ Find `k` largest elements of an array and return their indices.
 * `a`: some array.
 * `k`: number of largest elements to be found.
 """
-function maxk(a::AbstractVector, k::Int)
+function maxk(a::AbstractVector{T}, k::Int) where T<:Real
     ix = partialsortperm(a, 1:k, rev=true)
     @inbounds @views collect(ix), collect(a[ix[1:k]])
 end
@@ -63,7 +104,7 @@ Find `k` pairs `(a_i,b_i)` with largest products from two arrays `a` and `b`.
 * `b`: some array.
 * `k`: number of largest products to be found.
 """
-function max_prod_pairs(a::AbstractVector, b::AbstractVector, k::Int)
+function max_prod_pairs(a::AbstractVector{T1}, b::AbstractVector{T2}, k::Int) where {T1<:Real, T2<:Real}
     ix_a, _a = maxk(a, min(k,length(a)))
     ix_b, _b = maxk(b, min(k,length(b)))
     heap_idcs = [CartesianIndex(i,1) for i in 1:length(_a)]
@@ -98,6 +139,8 @@ basis and the eigenkets of A and B.
 function corner_subspace(ρA::DenseOperator{B1,B1}, ρB::DenseOperator{B2,B2}, M::Int) where {B1<:Basis,B2<:Basis}
     bA = ρA.basis_l
     bB = ρB.basis_l
+    #ps_A, αs_A = eigen(hermitianize(ρA).data); # αs_A[:,i] : i-th eigenvector
+    #ps_B, αs_B = eigen(hermitianize(ρB).data);
     ps_A, αs_A = eigen(ρA.data); # αs_A[:,i] : i-th eigenvector
     ps_B, αs_B = eigen(ρB.data);
     mgs!(αs_A);
@@ -114,10 +157,10 @@ end
 
 Project a system into a given corner space.
 # Arguments
-* `s`: `System`.
+* `s`: `SquareSystem`.
 * `cspace`: `SubspaceBasis` of the corner.
 """
-function cornerize(s::AbstractSystem,cspace::SubspaceBasis)
+function cornerize(s::SquareSystem,cspace::SubspaceBasis)
     P = projector(cspace,s.gbasis);
     Pd = dagger(P);
     proj(op) = P*op*Pd;
@@ -128,36 +171,36 @@ function cornerize(s::AbstractSystem,cspace::SubspaceBasis)
     Htright = proj.(s.Htright);
     J = proj.(s.J);
     obs = [Dict([name => proj(lop) for (name,lop) in s.observables[i]]) for i in 1:nv(s.lattice)]
-    return System{typeof(s.lattice),typeof(cspace),typeof(H),eltype(Httop),eltype(J),typeof(H)}(s.lattice,cspace,H,Httop,Htbottom,Htleft,Htright,J,obs)
+    return SquareSystem{typeof(cspace),typeof(H),eltype(Httop),eltype(J),typeof(H)}(s.lattice,cspace,H,Httop,Htbottom,Htleft,Htright,J,obs)
 end
 
 """
     merge(s1, s2)
 
-Merge two `System`s along some compatible dimension with no corner compression.
+Merge two `SquareSystem`s along some compatible dimension with no corner compression.
 # Arguments
-* `s1`: `System`.
-* `s2`: `System`.
+* `s1`: `SquareSystem`.
+* `s2`: `SquareSystem`.
 """
-function merge(s1::AbstractSystem,s2::AbstractSystem)
+function Base.merge(s1::SquareSystem,s2::SquareSystem)
     if s1.lattice.ny == s2.lattice.ny
         return vmerge(s1,s2)
     elseif s1.lattice.ny == s2.lattice.ny
         return hmerge(s1,s2)
     else
-        error("Systems have incompatible lattice sizes: ($(s1.lattice.nx),$(s1.lattice.ny)) and ($(s2.lattice.nx),$(s2.lattice.ny))")
+        throw(DimensionMismatch("Systems have incompatible lattice sizes: ($(s1.lattice.nx),$(s1.lattice.ny)) and ($(s2.lattice.nx),$(s2.lattice.ny))"))
     end
 end
 
 """
     vmerge(s1, s2)
 
-Merge two `System`s vertically with no corner compression.
+Merge two `SquareSystem`s vertically with no corner compression.
 # Arguments
-* `s1`: `System`.
-* `s2`: `System`.
+* `s1`: `SquareSystem`.
+* `s2`: `SquareSystem`.
 """
-function vmerge(s1::AbstractSystem,s2::AbstractSystem)
+function vmerge(s1::SquareSystem,s2::SquareSystem)
     # TO DO: tests
     lattice = vunion(s1.lattice,s2.lattice)
     Id1 = one(s1.gbasis)
@@ -188,18 +231,18 @@ function vmerge(s1::AbstractSystem,s2::AbstractSystem)
             obs[length(s1.observables)+i][k] = Id1 ⊗ s2.observables[i][k]
         end
     end
-    return System{typeof(lattice),typeof(gbasis),typeof(H),eltype(Httop),eltype(J),typeof(H)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J,obs)
+    return SquareSystem{typeof(gbasis),typeof(H),eltype(Httop),eltype(J),typeof(H)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J,obs)
 end
 
 """
     vmerge(s1, s2)
 
-Merge two `System`s horizontally with no corner compression.
+Merge two `SquareSystem`s horizontally with no corner compression.
 # Arguments
-* `s1`: `System`.
-* `s2`: `System`.
+* `s1`: `SquareSystem`.
+* `s2`: `SquareSystem`.
 """
-function hmerge(s1::AbstractSystem,s2::AbstractSystem)
+function hmerge(s1::SquareSystem,s2::SquareSystem)
     # TO DO: tests
     lattice = hunion(s1.lattice,s2.lattice)
     Id1 = one(s1.gbasis)
@@ -230,7 +273,25 @@ function hmerge(s1::AbstractSystem,s2::AbstractSystem)
             obs[length(s1.observables)+i][k] = Id1 ⊗ s2.observables[i][k]
         end
     end
-    return System{typeof(lattice),typeof(gbasis),typeof(H),eltype(Httop),eltype(J),typeof(H)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J,obs)
+    return SquareSystem{typeof(gbasis),typeof(H),eltype(Httop),eltype(J),typeof(H)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J,obs)
+end
+
+"""
+    hermitianize(x)
+
+Extract the Hermitian part of `x`.
+# Arguments
+* `x`: some operator.
+"""
+function hermitianize(x::AbstractOperator{B,B}) where {B<:Basis}
+    ishermitian(x) && return x
+    n = LinearAlgebra.checksquare(x.data);
+    y = copy(x);
+    @inbounds @views for j = 1:n, i = 1:j
+        y.data[i,j] = (y.data[i,j] + conj(y.data[j,i])) / 2.
+        y.data[j,i] = conj(y.data[i,j]);
+    end
+    return y
 end
 
 """
@@ -241,49 +302,51 @@ Extract the Hermitian part of `x`.
 * `x`: some operator.
 """
 function hermitianize!(x::AbstractOperator{B,B}) where {B<:Basis}
+    ishermitian(x) && return x
     n = LinearAlgebra.checksquare(x.data);
-    @inbounds for j = 1:n, i = 1:j
-        x.data[i,j] = (x.data[i,j] + conj(x.data[j,i])) / 2
+    @inbounds @views for j = 1:n, i = 1:j
+        x.data[i,j] = (x.data[i,j] + conj(x.data[j,i])) / 2.
         x.data[j,i] = conj(x.data[i,j]);
     end
-    nothing
+    return x
 end
 
 """
     merge(s1, s2, ρ1, ρ2, M)
 
-Merge two `System`s along some compatible dimension with corner compression.
+Merge two `SquareSystem`s along some compatible dimension with corner compression.
 # Arguments
-* `s1`: `System`.
-* `s2`: `System`.
+* `s1`: `SquareSystem`.
+* `s2`: `SquareSystem`.
 * `ρ1`: state of the system `s1`.
 * `ρ2`: state of the system `s2`.
 * `M`: corner dimension.
 """
-function Base.merge(s1::AbstractSystem,s2::AbstractSystem,ρ1::DenseOperator{B1,B1},ρ2::DenseOperator{B2,B2},M::Int) where {B1<:Basis,B2<:Basis}
+function Base.merge(s1::SquareSystem,s2::SquareSystem,ρ1::DenseOperator{B1,B1},ρ2::DenseOperator{B2,B2},M::Int) where {B1<:Basis,B2<:Basis}
     # TO DO: add tests on M
     if s1.lattice.ny == s2.lattice.ny
         return vmerge(s1,s2,ρ1,ρ2,M)
     elseif s1.lattice.ny == s2.lattice.ny
         return hmerge(s1,s2,ρ1,ρ2,M)
     else
-        error("Systems have incompatible lattice sizes: ($(s1.lattice.nx),$(s1.lattice.ny)) and ($(s2.lattice.nx),$(s2.lattice.ny))")
+        throw(DimensionMismatch("Systems have incompatible lattice sizes: ($(s1.lattice.nx),$(s1.lattice.ny)) and ($(s2.lattice.nx),$(s2.lattice.ny))"))
     end
 end
 
 """
     vmerge(s1, s2, ρ1, ρ2, M)
 
-Merge two `System`s vertically along some compatible dimension with corner compression.
+Merge two `SquareSystem`s vertically along some compatible dimension with corner compression.
 # Arguments
-* `s1`: `System`.
-* `s2`: `System`.
+* `s1`: `SquareSystem`.
+* `s2`: `SquareSystem`.
 * `ρ1`: state of the system `s1`.
 * `ρ2`: state of the system `s2`.
 * `M`: corner dimension.
 """
-function vmerge(s1::AbstractSystem,s2::AbstractSystem,ρ1::DenseOperator{B1,B1},ρ2::DenseOperator{B2,B2},M::Int) where {B1<:Basis,B2<:Basis}
+function vmerge(s1::SquareSystem,s2::SquareSystem,ρ1::DenseOperator{B1,B1},ρ2::DenseOperator{B2,B2},M::Int) where {B1<:Basis,B2<:Basis}
     # TO DO: tests
+    s1.lattice.ny == s2.lattice.ny || throw(DimensionMismatch("Systems have incompatible lattice sizes: ($(s1.lattice.nx),$(s1.lattice.ny)) and ($(s2.lattice.nx),$(s2.lattice.ny))"))
     lattice = vunion(s1.lattice,s2.lattice)
 
     bC, handles, ϕs_1, ϕs_2 = corner_subspace(ρ1,ρ2,M)
@@ -364,22 +427,23 @@ function vmerge(s1::AbstractSystem,s2::AbstractSystem,ρ1::DenseOperator{B1,B1},
         end
     end
 
-    return System{typeof(lattice),typeof(gbasis),typeof(H),eltype(Httop),eltype(J),typeof(H)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J,obs)
+    return SquareSystem{typeof(gbasis),typeof(H),eltype(Httop),eltype(J),typeof(H)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J,obs)
 end
 
 """
     hmerge(s1, s2, ρ1, ρ2, M)
 
-Merge two `System`s horizontally along some compatible dimension with corner compression.
+Merge two `SquareSystem`s horizontally along some compatible dimension with corner compression.
 # Arguments
-* `s1`: `System`.
-* `s2`: `System`.
+* `s1`: `SquareSystem`.
+* `s2`: `SquareSystem`.
 * `ρ1`: state of the system `s1`.
 * `ρ2`: state of the system `s2`.
 * `M`: corner dimension.
 """
-function hmerge(s1::AbstractSystem,s2::AbstractSystem,ρ1::DenseOperator{B1,B1},ρ2::DenseOperator{B2,B2},M::Int) where {B1<:Basis,B2<:Basis}
+function hmerge(s1::SquareSystem,s2::SquareSystem,ρ1::DenseOperator{B1,B1},ρ2::DenseOperator{B2,B2},M::Int) where {B1<:Basis,B2<:Basis}
     # TO DO: tests
+    s1.lattice.nx == s2.lattice.nx || throw(DimensionMismatch("Systems have incompatible lattice sizes: ($(s1.lattice.nx),$(s1.lattice.ny)) and ($(s2.lattice.nx),$(s2.lattice.ny))"))
     lattice = hunion(s1.lattice,s2.lattice)
 
     bC, handles, ϕs_1, ϕs_2 = corner_subspace(ρ1,ρ2,M)
@@ -459,25 +523,28 @@ function hmerge(s1::AbstractSystem,s2::AbstractSystem,ρ1::DenseOperator{B1,B1},
         end
     end
 
-    return System{typeof(lattice),typeof(gbasis),typeof(H),eltype(Httop),eltype(J),typeof(H)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J,obs)
+    return SquareSystem{typeof(gbasis),typeof(H),eltype(Httop),eltype(J),typeof(H)}(lattice,gbasis,H,Httop,Htbottom,Htleft,Htright,J,obs)
 end
 
 """
     merge(s1, s2, d, ρ1, ρ2, M)
 
-Merge two `ZnSystem`s along the `d`-th direction with corner compression.
+Merge two `NdSystem`s along the `d`-th direction with corner compression.
 # Arguments
-* `s1`: `ZnSystem`.
-* `s2`: `ZnSystem`.
+* `s1`: `NdSystem`.
+* `s2`: `NdSystem`.
 * `d`: merging direction.
 * `ρ1`: state of the system `s1`.
 * `ρ2`: state of the system `s2`.
 * `M`: corner dimension.
 """
-function Base.merge(s1::ZnSystem{N},s2::ZnSystem{N},d::Integer,ρ1::DenseOperator{B1,B1},ρ2::DenseOperator{B2,B2},M::Int) where {N,B1<:Basis,B2<:Basis}
+function Base.merge(s1::NdSystem{N},s2::NdSystem{N},d::Integer,ρ1::DenseOperator{B1,B1},ρ2::DenseOperator{B2,B2},M::Int) where {N,B1<:Basis,B2<:Basis}
     # TO DO: tests
+    length(s1.lattice.Vext[d]) == length(s2.lattice.Vint[d]) || throw(DimensionMismatch("Lattices cannot be merged in this direction."))
     @assert s1.lattice.pbc == s2.lattice.pbc "Cannot merge systems with periodic and open open boundary conditions."
     lattice = union(s1.lattice,s2.lattice,d)
+
+    @assert all(s1.trate .≈ s2.trate) "Tunelling rates of the two input systems are not equal along all directions."
 
     bC, handles, ϕs_1, ϕs_2 = corner_subspace(ρ1,ρ2,M)
     vt_1 = map(x->transpose(x.data), ϕs_1)
@@ -546,13 +613,13 @@ function Base.merge(s1::ZnSystem{N},s2::ZnSystem{N},d::Integer,ρ1::DenseOperato
         Ht1 = zeros(ComplexF64,size(s1.H.data))
         if s1.lattice.shape[d] > 2
             @inbounds for i in 1:length(s1.Htext[d])
-                Ht1 .+= (s1.Htext[d][i] * dagger(s1.Htint[d][i])).data;
+                Ht1 .+= s1.trate[d] * (s1.Htext[d][i] * dagger(s1.Htint[d][i])).data;
             end
         end
         Ht2 = zeros(ComplexF64,size(s2.H.data))
         if s2.lattice.shape[d] > 2
             @inbounds for i in 1:length(s2.Htext[d])
-                Ht2 .+= (s2.Htext[d][i] * dagger(s2.Htint[d][i])).data;
+                Ht2 .+= s2.trate[d] * (s2.Htext[d][i] * dagger(s2.Htint[d][i])).data;
             end
         end
         H.data .= 𝒫1(DenseOperator(s1.gbasis, s1.H.data .- (Ht1 .+ Ht1'))).data .+ 𝒫2(DenseOperator(s2.gbasis, s2.H.data .- (Ht2 .+ Ht2'))).data;
@@ -562,9 +629,9 @@ function Base.merge(s1::ZnSystem{N},s2::ZnSystem{N},d::Integer,ρ1::DenseOperato
     gbasis = H.basis_l;
     Ht = zeros(ComplexF64,size(H.data));
     @inbounds for i in 1:length(s1.Htext[d])
-        Ht .= 𝒫(s1.Htext[d][i],dagger(s2.Htint[d][i])).data;
+        Ht .= s1.trate[d] * 𝒫(s1.Htext[d][i],dagger(s2.Htint[d][i])).data;
         if lattice.pbc
-            Ht .+= 𝒫(dagger(s1.Htint[d][i]), s2.Htext[d][i]).data;
+            Ht .+= s1.trate[d] * 𝒫(dagger(s1.Htint[d][i]), s2.Htext[d][i]).data;
         end
         H.data .+= Ht .+ Ht';
     end
@@ -599,5 +666,5 @@ function Base.merge(s1::ZnSystem{N},s2::ZnSystem{N},d::Integer,ρ1::DenseOperato
         end
     end
 
-    return ZnSystem{N,typeof(lattice),typeof(gbasis),typeof(H),eltype(first(Htint)),eltype(J),typeof(H)}(lattice,gbasis,H,Tuple(Htint),Tuple(Htext),J,obs)
+    return NdSystem{N,typeof(lattice),typeof(gbasis),typeof(H),eltype(first(Htint)),eltype(J),typeof(H)}(lattice,gbasis,H,s1.trate,Tuple(Htint),Tuple(Htext),J,obs)
 end

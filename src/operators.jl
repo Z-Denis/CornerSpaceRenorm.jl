@@ -1,34 +1,84 @@
 """
-    hamiltonian(L, lH, tH)
+    hamiltonian(L, lH, lHt)
 
 Construct a Hamiltonian from a `Lattice` and operators.
 # Arguments
 * `L`: Lattice.
 * `lH`: local Hamiltonian.
-* `tH`: `Vector` of `Tuple` of two local operators defining the tunneling.
+* `lHt`: `Tuple` of the form (t,Op) from which tunnelling terms are built
+according to Σ<i,j> (t * Op[i] ⊗ Op[j]' + t' * Op[j] ⊗ Op[i]')
 """
-function hamiltonian(L::Lattice, lH::AbstractOperator{B,B}, tH::Vector{Tuple{Vararg{O,2}}}) where {B<:Basis,O<:AbstractOperator{B,B}}
+function hamiltonian(L::Lattice, lH::O1, lHt::Tuple{Number,O2}) where {B<:Basis,O1<:AbstractOperator{B,B},O2<:AbstractOperator{B,B}}
     gbasis = CompositeBasis([lH.basis_l for i in 1:nv(L)]...);
     H = begin
-            if (typeof(lH) <: SparseOperator) && (typeof(lH) <: SparseOperator)
+            if typeof(lH) <: SparseOperator && typeof(lHt[2]) <: SparseOperator
                 SparseOperator(gbasis);
             else
                 DenseOperator(gbasis);
             end
         end
+
     for e in edges(L)
-        for i in 1:length(tH)
-            H.data .+= embed(gbasis,[e.src, e.dst],collect(tH[i])).data;
-        end
+        H.data .+= lHt[1] * embed(gbasis,[e.src, e.dst],[lHt[2]; dagger(lHt[2])]).data;
     end
     H.data .= H.data + H.data';
-    @inbounds for v in vertices(L)
+
+    for v in vertices(L)
         H.data .+= embed(gbasis, v, lH).data;
     end
+
     return H;
 end
 
-#hamiltonian(s::System) = hamiltonian(s.lattice, s.lH, [s.tH])
+function hamiltonian(L::Lattice, lH::O1, trate::Number, lHt::O2) where {N,Q,B<:Basis,O1<:AbstractOperator{B,B},O2<:AbstractOperator{B,B}}
+    hamiltonian(L, lH, (trate, lHt))
+end
+
+"""
+    hamiltonian(L, lH, trate, lHt)
+
+Construct a Hamiltonian from a `Lattice` and operators.
+# Arguments
+* `L`: `NdLattice{N}`.
+* `lH`: local Hamiltonian.
+* `trate`: tunnelling rate or N-`Tuple` containing a rate per lattice dimension.
+* `lHt`: local operator from which tunnelling terms are built as lHt[i]' ⊗ lHt[j]'.
+"""
+function hamiltonian(L::NdLattice{N}, lH::O1, trate::Tuple{Vararg{Number,Q}}, lHt::O2) where {N,Q,B<:Basis,O1<:AbstractOperator{B,B},O2<:AbstractOperator{B,B}}
+    @assert Q == N "Number of tunnelling rates must match number of dimensions"
+    gbasis = CompositeBasis([lH.basis_l for i in 1:nv(L)]...);
+    H = begin
+            if typeof(lH) <: SparseOperator && typeof(lHt) <: SparseOperator
+                SparseOperator(gbasis);
+            else
+                DenseOperator(gbasis);
+            end
+        end
+    lids = LinearIndices(L.shape)
+    function lattice_slice(d::Int,i::Int)
+        symbids = [mod1(i,L.shape[d]);fill(:(:), N-1)]
+        Core.eval(CornerSpaceRenorm,Expr(:ref, :($lids), circshift(symbids,d-1)...))[:]
+    end
+    # E[d]: set of edges along the d-th dimension
+    E = [Vector{LightGraphs.SimpleGraphs.SimpleEdge{Int64}}(undef,0) for i in 1:N]
+    for d in 1:N
+        i_max = L.pbc && (L.shape[d] > 2) ? L.shape[d] : L.shape[d]-1
+        E[d] = vcat([[Edge(e) for e in zip(lattice_slice(d,i),lattice_slice(d,i+1))] for i in 1:i_max]...)
+    end
+
+    for d in 1:N
+        for e in E[d]
+            H.data .+= trate[d] * embed(gbasis,[e.src, e.dst],[lHt; dagger(lHt)]).data;
+        end
+    end
+    H.data .= H.data + H.data';
+
+    for v in vertices(L)
+        H.data .+= embed(gbasis, v, lH).data;
+    end
+
+    return H;
+end
 
 """
     dissipators(L, J)
@@ -42,5 +92,3 @@ function dissipators(L::Lattice, J::Vector{O}) where {B<:Basis,O<:AbstractOperat
     gbasis = CompositeBasis([first(J).basis_l for i in 1:nv(L)]...);
     return vcat([[embed(gbasis, v, J[i]) for i in 1:length(J)] for v in vertices(L)]...)
 end
-
-#dissipators(s::System) = dissipators(s.lattice, s.J)
