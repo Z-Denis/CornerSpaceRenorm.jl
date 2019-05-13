@@ -5,6 +5,16 @@
 
 In-development Julia package for performing corner space renormalization<sup id="a1">[1](#f1)</sup>.
 
+## Principle
+
+The corner space renormalization (CSR) procedure <sup id="a1">[1](#f1)</sup> consists in reducing the number of states required to represent a quantum mixed steady-state of a large lattice system by using previous knowledge about the steady-state of its subspaces. First, the steady-state <img src="https://latex.codecogs.com/gif.latex?\hat{\rho}" title="\hat{\rho}" /> of a reasonably sized lattice is computed, then two copies A and B of this lattice are merged and the CSR procedure is used to restrict the dimensionality of the doubled lattice Hilbert space <img src="https://latex.codecogs.com/gif.latex?\mathcal{H}_{A{\oplus}B}" title="\mathcal{H}_{A{\oplus}B}" /> from <img src="https://latex.codecogs.com/gif.latex?\lvert\mathcal{H}_{A}\rvert\times\lvert\mathcal{H}_{B}\rvert" title="\lvert\mathcal{H}_{A}\rvert\times\lvert\mathcal{H}_{B}\rvert" /> to some arbitrary corner dimension M, yielding the corner space <img src="https://latex.codecogs.com/gif.latex?\mathcal{H}_{A{\oplus}B}^{(M)}" title="\mathcal{H}_{A{\oplus}B}^{(M)}" />. Then the lattice Liouvillian is reconstructed on this compressed space. This process is then iterated by doubling the lattice over and over up to the desired size while monitoring the convergence of the compression method on some observables of interest.
+
+### The merging procedure
+
+From the steady-states <img src="https://latex.codecogs.com/gif.latex?\hat{\rho}_S&space;=&space;{\textstyle\sum_k}&space;p^{(S)}_k&space;\lvert\phi_k^{S}\rangle\langle\phi_k^{S}\rvert,\;&space;S\in\lbrace&space;A,B\rbrace" title="\hat{\rho}_S = {\textstyle\sum_k} p^{(S)}_k \lvert\phi_k^{S}\rangle\langle\phi_k^{S}\rvert,\; S\in\lbrace A,B\rbrace" /> of two compatible lattices, the Hilbert space of the doubled lattice <img src="https://latex.codecogs.com/gif.latex?\mathcal{H}_{A{\oplus}B}" title="\mathcal{H}_{A{\oplus}B}" /> can be given a basis <img src="https://latex.codecogs.com/gif.latex?\big\lbrace\lvert\phi_{r_k}^{A}\rangle\otimes\lvert\phi_{r_k^\prime}^{B}\rangle:&space;\;p_{k}^{(A)}p_{k}^{(B)}&space;\geq&space;p_{k&plus;1}^{(A)}p_{k&plus;1}^{(B)}&space;\big\rbrace_k" title="\big\lbrace\lvert\phi_{r_k}^{A}\rangle\otimes\lvert\phi_{r_k^\prime}^{B}\rangle: \;p_{k}^{(A)}p_{k}^{(B)} \geq p_{k+1}^{(A)}p_{k+1}^{(B)} \big\rbrace_k" /> of product states with decreasing joint probabilities. The corner space is then built as <img src="https://latex.codecogs.com/gif.latex?\mathcal{H}_{A{\oplus}B}^{(M)}&space;=&space;\mathrm{Span}\big(\big\lbrace\lvert\phi_{r_k}^{A}\rangle\otimes\lvert\phi_{r_k^\prime}^{B}\rangle&space;\big\rbrace_{k=1}^M\big)" title="\mathcal{H}_{A{\oplus}B}^{(M)} = \mathrm{Span}\big(\big\lbrace\lvert\phi_{r_k}^{A}\rangle\otimes\lvert\phi_{r_k^\prime}^{B}\rangle \big\rbrace_{k=1}^M\big)" /> and all system operators are mapped to this new space by means of a map <img src="https://latex.codecogs.com/gif.latex?\mathcal{P}^{(M)}:&space;B_1(\mathcal{H}_{A})&space;\oplus&space;B_1(\mathcal{H}_{A})&space;\rightarrow&space;B_1\big(\mathcal{H}_{A{\oplus}B}^{(M)}\big),&space;\;\lbrace&space;\hat{O}_A,&space;\hat{O}_B\rbrace&space;\mapsto&space;\mathcal{P}^{(M)}(\hat{O}_A,&space;\hat{O}_B)" title="\mathcal{P}^{(M)}: B_1(\mathcal{H}_{A}) \oplus B_1(\mathcal{H}_{A}) \rightarrow B_1\big(\mathcal{H}_{A{\oplus}B}^{(M)}\big), \;\lbrace \hat{O}_A, \hat{O}_B\rbrace \mapsto \mathcal{P}^{(M)}(\hat{O}_A, \hat{O}_B)" /> defined as <img src="https://latex.codecogs.com/gif.latex?\mathcal{P}^{(M)}(\hat{O}_A,&space;\hat{O}_B)&space;=&space;{\textstyle\sum_k}\langle\phi_{r_k}^{A}\rvert\hat{O}_A\lvert\phi_{r_{k^\prime}}^{A}\rangle\langle\phi_{r_k^\prime}^{B}\rvert\hat{O}_B\lvert\phi_{r_{k^\prime}^\prime}^{B}\rangle&space;\lvert\phi_{r_k}^{A},&space;\phi_{r_k^\prime}^{B}\rangle\langle\phi_{r_{k^\prime}}^{A},&space;\phi_{r_{k^\prime}^\prime}^{B}\rvert" title="\mathcal{P}^{(M)}(\hat{O}_A, \hat{O}_B) = {\textstyle\sum_k}\langle\phi_{r_k}^{A}\rvert\hat{O}_A\lvert\phi_{r_{k^\prime}}^{A}\rangle\langle\phi_{r_k^\prime}^{B}\rvert\hat{O}_B\lvert\phi_{r_{k^\prime}^\prime}^{B}\rangle \lvert\phi_{r_k}^{A}, \phi_{r_k^\prime}^{B}\rangle\langle\phi_{r_{k^\prime}}^{A}, \phi_{r_{k^\prime}^\prime}^{B}\rvert" />. For instance, the resulting Hamiltonian takes the form <img src="https://latex.codecogs.com/gif.latex?\hat{H}_{AB}^{(M)}&space;=&space;\mathcal{P}^{(M)}(\hat{H}_A,&space;\hat{1}_B)&space;&plus;&space;\mathcal{P}^{(M)}(\hat{1}_A,&space;\hat{H}_B)&space;&plus;&space;{\textstyle&space;\sum_{\langle&space;i\in&space;A;&space;j\in&space;B\rangle}}\mathcal{P}^{(M)}(\hat{O}_i^\dagger,&space;\hat{O}_j)&space;&plus;&space;\mathrm{H.c}" title="\hat{H}_{AB}^{(M)} = \mathcal{P}^{(M)}(\hat{H}_A, \hat{1}_B) + \mathcal{P}^{(M)}(\hat{1}_A, \hat{H}_B) + {\textstyle \sum_{\langle i\in A; j\in B\rangle}}\mathcal{P}^{(M)}(\hat{O}_i^\dagger, \hat{O}_j) + \mathrm{H.c}" />, where <img src="https://latex.codecogs.com/gif.latex?\lbrace\hat{O}_j\rbrace_j" title="\lbrace\hat{O}_j\rbrace_j" /> are some coupling operators at the lattices A and B.
+
+This package provides functions for applying this merging procedure in a multithreaded fashion for arbitrary N-dimensional lattices.
+
 ## Installation
 From the Pkg REPL (prefix `]`), type:
 ```julia-repl
@@ -47,7 +57,7 @@ Hamiltonian and dissipators can be built from a lattice and some input operators
 ```julia
 hamiltonian(L, lH, t, lHt)
 ```
-Generate a Hamiltonian for a lattice from some local Hamiltonian `lH` and a local hopping operator `lHt` with associated tunnelling rate `t` as `Σ_i lH_i + Σ_<i,j> (t * lH_i ⊗ lH_j' + H.c.)`.
+Generate a Hamiltonian for a lattice from some local Hamiltonian `lH` and a local hopping operator `lHt` with associated tunnelling rate `t` as <img src="https://latex.codecogs.com/gif.latex?{\textstyle&space;\sum_i}\hat{\texttt{lH}}_i&space;&plus;&space;{\textstyle&space;\sum_{\langle&space;i;j\rangle}}&space;(t\times\hat{\texttt{lHt}}_i\otimes\hat{\texttt{lHt}}_j^\dagger&space;&plus;&space;\mathrm{H.c.})" title="{\textstyle \sum_i}\hat{\texttt{lH}}_i + {\textstyle \sum_{\langle i;j\rangle}} (t\times\hat{\texttt{lHt}}_i\otimes\hat{\texttt{lHt}}_j^\dagger + \mathrm{H.c.})" />.
 ```julia
 hamiltonian(L, lH, (t1,t2, ... ,tN), lHt)
 ```
@@ -149,7 +159,7 @@ Projection into the corner space spanned by the `M` most probable product states
 ρ = steadystate_bicg(s, l; log=false, kwargs...)
 ρ, log = steadystate_bicg(s, l; log=true, kwargs...)
 ```
-Evaluates the steady state by solving iteratively the linear system `Lρ = 0` via the stabilized biconjugate gradient method with `l` `GMRES` steps. The first line of the Liouvillian is overwritten to enforce a non-trivial trace one solution, this approximation yields an error of the order of the inverse of the square of the size of the Hilbert space.
+Evaluates the steady state by solving iteratively the linear system <img src="https://latex.codecogs.com/gif.latex?\mathcal{L}\hat{\rho}&space;=&space;0" title="\mathcal{L}\hat{\rho} = 0" /> via the stabilized biconjugate gradient method with `l` `GMRES` steps. The first line of the Liouvillian is overwritten to enforce a non-trivial trace one solution, this approximation yields an error of the order of the inverse of the square of the size of the Hilbert space.
 
 ```julia
 ρ = steadystate_bicg_LtL(H, J, l; log=false, kwargs...)
@@ -157,7 +167,7 @@ Evaluates the steady state by solving iteratively the linear system `Lρ = 0` vi
 ρ = steadystate_bicg_LtL(s, l; log=false, kwargs...)
 ρ, log = steadystate_bicg_LtL(s, l; log=true, kwargs...)
 ```
-Evaluates the steady state by solving iteratively the linear system `<L,L(ρ)> + <tr,ρ> tr = tr` via the stabilized biconjugate gradient method with `l` `GMRES` steps. No approximation of the Liovillian is made in order to enfore the trace one but in practice convergence is slower and poorer.
+Evaluates the steady state by solving iteratively the linear system <img src="https://latex.codecogs.com/gif.latex?\langle\mathcal{L},\mathcal{L}\hat{\rho}\rangle&space;&plus;&space;\langle\mathrm{Tr},\hat{\rho}\rangle&space;\mathrm{Tr}&space;=&space;\mathrm{Tr}" title="\langle\mathcal{L},\mathcal{L}\hat{\rho}\rangle + \langle\mathrm{Tr},\hat{\rho}\rangle \mathrm{Tr} = \mathrm{Tr}" /> via the stabilized biconjugate gradient method with `l` `GMRES` steps. No approximation of the Liovillian is made in order to enfore the trace one but in practice convergence is slower and poorer.
 
 ## Plotting
 
