@@ -325,6 +325,29 @@ using Test, InteractiveUtils
             end
             # TO DO: Test construction and merging of generic lattices
         end;
+
+        @testset "CornerBasis" begin
+            # Test constructors
+            b1 = SpinBasis(1//2)
+            b2 = CompositeBasis([b1 for i in 1:10])
+            bC = CornerBasis(b1, b2, 10)
+            @test bC == CornerBasis([10],10,[[2], fill(2,10)])
+            bC2 = CornerBasis(bC, bC, 10)
+            @test bC2 == CornerBasis([10],10,vcat(bC.local_shapes, bC.local_shapes))
+
+            # Test Base.== overload
+            bC = CornerBasis(10)
+            @test bC == deepcopy(bC)
+            @test bC !== SpinBasis(1//2)
+            @test bC !== FockBasis(1)
+            @test bC !== GenericBasis(1)
+            bC2 = CornerBasis([11],bC.M,bC.local_shapes)
+            @test bC !== bC2
+            bC2 = CornerBasis(bC.shape,bC.M+1,bC.local_shapes)
+            @test bC !== bC2
+            bC2 = CornerBasis(bC.shape,bC.M,vcat(bC.local_shapes, [[1]]))
+            @test bC !== bC2
+        end;
     end;
 
     @testset "Corner algorithm" begin
@@ -356,12 +379,12 @@ using Test, InteractiveUtils
             # Test hermitianize
             b = GenericBasis(50)
             Op = randoperator(b)
-            OpH = CornerSpaceRenorm.hermitianize(Op)
+            OpH = hermitianize(Op)
             @test ishermitian(OpH.data)
             @test maximum(abs2.(OpH.data .- (Op + dagger(Op)).data/2.)) ≈ 0. atol=eps(Float64)
             Op = randoperator(b);
             OpH = copy(Op);
-            CornerSpaceRenorm.hermitianize!(OpH)
+            hermitianize!(OpH)
             @test ishermitian(OpH.data)
             @test maximum(abs2.(OpH.data .- (Op + dagger(Op)).data/2.)) ≈ 0. atol=eps(Float64)
         end;
@@ -389,16 +412,23 @@ using Test, InteractiveUtils
                 H = hamiltonian(L, g/2 * sx, V/4, sz)
                 J = dissipators(L, [sqrt(2gamma) * sm])
 
+                function corner_subspace_basis(b,handles,ϕs_A,ϕs_B)
+                    bA = first(ϕs_A).basis
+                    bB = first(ϕs_B).basis
+                    bC = typeof(bA) <: CompositeBasis ? CompositeBasis(bA.bases...,bB.bases...) : CompositeBasis(bA,bB)
+                    SubspaceBasis(bC, [ϕs_A[idcs[1]] ⊗ ϕs_B[idcs[2]] for idcs in handles])
+                end
+
                 # Test cornerized merging
                 # Dumb version
                 s1 = SquareSystem(L, H, sqrt(V/4)*sz, J, lobs)
                 ρ1 = steadystate.master(s1.H,s1.J)[2][end]
                 s1 = vmerge(s1,s1)
-                cspace = corner_subspace(ρ1,ρ1,10)[1]
+                cspace = corner_subspace_basis(corner_subspace(ρ1,ρ1,10)...)
                 s1 = cornerize(s1,cspace)
                 ρ1 = steadystate.master(s1.H,s1.J)[2][end]
                 s1 = hmerge(s1,s1)
-                cspace = corner_subspace(ρ1,ρ1,10)[1]
+                cspace = corner_subspace_basis(corner_subspace(ρ1,ρ1,10)...)
                 s1 = cornerize(s1,cspace)
 
                 # Wise version

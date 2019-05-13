@@ -393,3 +393,28 @@ Equivalent to `GraphPlot.gplot(s.lattice.L, locs_x_in, locs_y_in; kwargs...)`.
 See documentation of [`GraphPlot.gplot`](@ref).
 """
 plot_system(s::AbstractSystem, locs_x_in::Vector{R}, locs_y_in::Vector{R}; kwargs...) where R<:Real = GraphPlot.gplot(s.lattice.L, locs_x_in, locs_y_in; kwargs...)
+
+"""
+    CornerBasis <: Basis
+
+Corner basis.
+"""
+struct CornerBasis <: Basis
+    shape::Vector{Int64}
+    M::Int64
+    local_shapes::Vector{Vector{Int64}}
+end
+
+"""
+    CornerBasis(M)
+
+Construct a corner basis with corner dimension `M`.
+"""
+CornerBasis(M::Int64) = CornerBasis([M], M, [[M]])
+CornerBasis(b1::Basis, b2::Basis, M::Int64) = CornerBasis([M], M, [b1.shape, b2.shape])
+CornerBasis(b1::CornerBasis, b2::CornerBasis, M::Int64) = CornerBasis([M], M, vcat(b1.local_shapes, b2.local_shapes))
+
+import Base: ==
+==(b1::CornerBasis, b2::CornerBasis) = (b1.M .== b2.M) &&
+                                       (b1.shape == b2.shape) &&
+                                       all(b1.local_shapes .== b2.local_shapes)

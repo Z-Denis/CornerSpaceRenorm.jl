@@ -149,7 +149,7 @@ function corner_subspace(ρA::DenseOperator{B1,B1}, ρB::DenseOperator{B2,B2}, M
     @inbounds ϕs_B = [Ket(bB, αs_B[:,i]) for i in 1:length(ps_B)]
     handles, prod_pairs = max_prod_pairs(real.(ps_A), real.(ps_B), M)
     bC = typeof(bA) <: CompositeBasis ? CompositeBasis(bA.bases...,bB.bases...) : CompositeBasis(bA,bB)
-    return SubspaceBasis(bC, [ϕs_A[idcs[1]] ⊗ ϕs_B[idcs[2]] for idcs in handles]), handles, ϕs_A, ϕs_B
+    return CornerBasis(bA, bB, M), handles, ϕs_A, ϕs_B
 end
 
 """
