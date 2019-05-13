@@ -93,11 +93,8 @@ end
 @inline LightGraphs.nv(L::Lattice) = LightGraphs.nv(L.L);
 @inline LightGraphs.ne(L::Lattice) = LightGraphs.ne(L.L);
 @inline LightGraphs.has_edge(L::Lattice, s::Int64, d::Int64) = LightGraphs.has_edge(L.L,s,d);
-@inline LightGraphs.has_vertex(L::Lattice) = LightGraphs.has_vertex(L.L);
 @inline LightGraphs.has_edge(L::Lattice, e::AbstractEdge{Int64}) = LightGraphs.has_edge(L.L,e);
-@inline LightGraphs.inneighbors(L::Lattice) = LightGraphs.inneighbors(L.L);
 @inline LightGraphs.has_vertex(L::Lattice, v::Int64) = LightGraphs.has_vertex(L.L,v);
-@inline LightGraphs.outneighbors(L::Lattice) = LightGraphs.outneighbors(L.L);
 @inline LightGraphs.inneighbors(L::Lattice, v::Int64) = LightGraphs.inneighbors(L.L,v);
 @inline LightGraphs.outneighbors(L::Lattice, v::Int64) = LightGraphs.outneighbors(L.L,v);
 @inline LightGraphs.is_directed(L::Lattice) = false;
