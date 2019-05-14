@@ -325,6 +325,29 @@ using Test, InteractiveUtils
             end
             # TO DO: Test construction and merging of generic lattices
         end;
+
+        @testset "CornerBasis" begin
+            # Test constructors
+            b1 = SpinBasis(1//2)
+            b2 = CompositeBasis([b1 for i in 1:10])
+            bC = CornerBasis(b1, b2, 10)
+            @test bC == CornerBasis([10],10,[[2], fill(2,10)])
+            bC2 = CornerBasis(bC, bC, 10)
+            @test bC2 == CornerBasis([10],10,vcat(bC.local_shapes, bC.local_shapes))
+
+            # Test Base.== overload
+            bC = CornerBasis(10)
+            @test bC == deepcopy(bC)
+            @test bC !== SpinBasis(1//2)
+            @test bC !== FockBasis(1)
+            @test bC !== GenericBasis(1)
+            bC2 = CornerBasis([11],bC.M,bC.local_shapes)
+            @test bC !== bC2
+            bC2 = CornerBasis(bC.shape,bC.M+1,bC.local_shapes)
+            @test bC !== bC2
+            bC2 = CornerBasis(bC.shape,bC.M,vcat(bC.local_shapes, [[1]]))
+            @test bC !== bC2
+        end;
     end;
 
     @testset "Corner algorithm" begin
@@ -356,12 +379,12 @@ using Test, InteractiveUtils
             # Test hermitianize
             b = GenericBasis(50)
             Op = randoperator(b)
-            OpH = CornerSpaceRenorm.hermitianize(Op)
+            OpH = hermitianize(Op)
             @test ishermitian(OpH.data)
             @test maximum(abs2.(OpH.data .- (Op + dagger(Op)).data/2.)) ≈ 0. atol=eps(Float64)
             Op = randoperator(b);
             OpH = copy(Op);
-            CornerSpaceRenorm.hermitianize!(OpH)
+            hermitianize!(OpH)
             @test ishermitian(OpH.data)
             @test maximum(abs2.(OpH.data .- (Op + dagger(Op)).data/2.)) ≈ 0. atol=eps(Float64)
         end;
@@ -389,16 +412,23 @@ using Test, InteractiveUtils
                 H = hamiltonian(L, g/2 * sx, V/4, sz)
                 J = dissipators(L, [sqrt(2gamma) * sm])
 
+                function corner_subspace_basis(b,handles,ϕs_A,ϕs_B)
+                    bA = first(ϕs_A).basis
+                    bB = first(ϕs_B).basis
+                    bC = typeof(bA) <: CompositeBasis ? CompositeBasis(bA.bases...,bB.bases...) : CompositeBasis(bA,bB)
+                    SubspaceBasis(bC, [ϕs_A[idcs[1]] ⊗ ϕs_B[idcs[2]] for idcs in handles])
+                end
+
                 # Test cornerized merging
                 # Dumb version
                 s1 = SquareSystem(L, H, sqrt(V/4)*sz, J, lobs)
                 ρ1 = steadystate.master(s1.H,s1.J)[2][end]
                 s1 = vmerge(s1,s1)
-                cspace = corner_subspace(ρ1,ρ1,10)[1]
+                cspace = corner_subspace_basis(corner_subspace(ρ1,ρ1,10)...)
                 s1 = cornerize(s1,cspace)
                 ρ1 = steadystate.master(s1.H,s1.J)[2][end]
                 s1 = hmerge(s1,s1)
-                cspace = corner_subspace(ρ1,ρ1,10)[1]
+                cspace = corner_subspace_basis(corner_subspace(ρ1,ρ1,10)...)
                 s1 = cornerize(s1,cspace)
 
                 # Wise version
@@ -537,6 +567,27 @@ using Test, InteractiveUtils
                     @test maximum([maximum(abs2.(eigvals(Matrix(s1.J[i].data's1.J[i].data)) .- eigvals(Matrix(s2.J[i].data's2.J[i].data)))) for i in 1:length(s1.J)]) ≈ 0. atol=eps(Float64)
                     @test maximum(abs2.(eigvals(ρ1.data) .- eigvals(ρ2.data))) ≈ 0. atol=1e-5
                 end
+
+                # Merging different lattices
+                Ls = NdLattice((3,))
+                Hs = hamiltonian(Ls, g/2 * sx, V/4, sz)
+                Js = dissipators(Ls, [sqrt(2gamma) * sm])
+                ss = NdSystem(Ls, Hs, V/4, sz, Js, lobs)
+                ρs = steadystate.master(ss)[2][end]
+
+                t = 1.
+                Δ = 1.
+                κ = 1.
+                F = 5e-1 * κ
+
+                lb = FockBasis(1)
+                Lb = NdLattice((3,),periodic=false)
+                Hb = hamiltonian(Lb, -Δ * number(lb) + F * (create(lb) + destroy(lb)), t/2., destroy(lb))
+                Jb = dissipators(Lb,[sqrt(κ) * destroy(lb)])
+                sb = NdSystem(Lb,Hb,(t/2.,),destroy(lb),Jb)
+                ρb = steadystate.master(sb)[2][end]
+
+                @test_logs (:info,"The two input systems do not have equal tunnelling rates along all directions.") s_sb = merge(ss,sb,1,ρs,ρb,10)
             end;
         end;
     end;

@@ -149,7 +149,7 @@ function corner_subspace(ρA::DenseOperator{B1,B1}, ρB::DenseOperator{B2,B2}, M
     @inbounds ϕs_B = [Ket(bB, αs_B[:,i]) for i in 1:length(ps_B)]
     handles, prod_pairs = max_prod_pairs(real.(ps_A), real.(ps_B), M)
     bC = typeof(bA) <: CompositeBasis ? CompositeBasis(bA.bases...,bB.bases...) : CompositeBasis(bA,bB)
-    return SubspaceBasis(bC, [ϕs_A[idcs[1]] ⊗ ϕs_B[idcs[2]] for idcs in handles]), handles, ϕs_A, ϕs_B
+    return CornerBasis(bA, bB, M), handles, ϕs_A, ϕs_B
 end
 
 """
@@ -544,7 +544,7 @@ function Base.merge(s1::NdSystem{N},s2::NdSystem{N},d::Integer,ρ1::DenseOperato
     @assert s1.lattice.pbc == s2.lattice.pbc "Cannot merge systems with periodic and open open boundary conditions."
     lattice = union(s1.lattice,s2.lattice,d)
 
-    @assert all(s1.trate .≈ s2.trate) "Tunelling rates of the two input systems are not equal along all directions."
+    all(s1.trate .≈ s2.trate) || @info "The two input systems do not have equal tunnelling rates along all directions."
 
     bC, handles, ϕs_1, ϕs_2 = corner_subspace(ρ1,ρ2,M)
     vt_1 = map(x->transpose(x.data), ϕs_1)
