@@ -25,7 +25,7 @@ function steadystate_bicg(H::DenseOperator{B,B}, J::Vector{O}, l::Int=2; log::Bo
         iHnh .+= -0.5adjoint(J[i].data)*J[i].data
     end
 
-    # In-place update of y = L.x where L and x are respectively the vectorized
+    # In-place update of y = Lx where L and x are respectively the vectorized
     # Liouvillian and the vectorized density matrix. y[1] is set to the trace
     # of the density matrix so as to enforce a trace one non-trivial solution.
     function mvecmul!(y::AbstractVector, x::AbstractVector)
