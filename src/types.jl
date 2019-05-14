@@ -411,6 +411,11 @@ end
 Construct a corner basis with corner dimension `M`.
 """
 CornerBasis(M::Int64) = CornerBasis([M], M, [[M]])
+"""
+    CornerBasis(b1, b2, M)
+
+Construct a corner basis with corner dimension `M` from two basis.
+"""
 CornerBasis(b1::Basis, b2::Basis, M::Int64) = CornerBasis([M], M, [b1.shape, b2.shape])
 CornerBasis(b1::CornerBasis, b2::CornerBasis, M::Int64) = CornerBasis([M], M, vcat(b1.local_shapes, b2.local_shapes))
 

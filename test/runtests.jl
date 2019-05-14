@@ -567,6 +567,27 @@ using Test, InteractiveUtils
                     @test maximum([maximum(abs2.(eigvals(Matrix(s1.J[i].data's1.J[i].data)) .- eigvals(Matrix(s2.J[i].data's2.J[i].data)))) for i in 1:length(s1.J)]) ≈ 0. atol=eps(Float64)
                     @test maximum(abs2.(eigvals(ρ1.data) .- eigvals(ρ2.data))) ≈ 0. atol=1e-5
                 end
+
+                # Merging different lattices
+                Ls = NdLattice((3,))
+                Hs = hamiltonian(Ls, g/2 * sx, V/4, sz)
+                Js = dissipators(Ls, [sqrt(2gamma) * sm])
+                ss = NdSystem(Ls, Hs, V/4, sz, Js, lobs)
+                ρs = steadystate.master(ss)[2][end]
+
+                t = 1.
+                Δ = 1.
+                κ = 1.
+                F = 5e-1 * κ
+
+                lb = FockBasis(1)
+                Lb = NdLattice((3,),periodic=false)
+                Hb = hamiltonian(Lb, -Δ * number(lb) + F * (create(lb) + destroy(lb)), t/2., destroy(lb))
+                Jb = dissipators(Lb,[sqrt(κ) * destroy(lb)])
+                sb = NdSystem(Lb,Hb,(t/2.,),destroy(lb),Jb)
+                ρb = steadystate.master(sb)[2][end]
+
+                @test_logs (:info,"The two input systems do not have equal tunnelling rates along all directions.") s_sb = merge(ss,sb,1,ρs,ρb,10)
             end;
         end;
     end;
