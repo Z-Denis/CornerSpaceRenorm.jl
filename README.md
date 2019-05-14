@@ -280,74 +280,97 @@ F = 1e-1κ # Driving strength
 t = 1.    # tunneling rate
 Δ = -1t   # Detuning
 
-# 2x4 Bose-Hubbard lattice with periodic boundary conditions.
+# Start from a 3x3 Bose-Hubbard lattice with periodic boundary conditions.
 # Dimension is guessed from the length of the shape tuple.
-L = NdLattice((2,4); periodic=true)
+L = NdLattice((3,3); periodic=true)
 # Local Hamiltonian
 lH = -Δ*N + F*(a + dagger(a))
 H = hamiltonian(L, lH, -t/2., a)
 J = dissipators(L, [sqrt(κ) * a])
 
+mean_pop(s,ρ) = real(sum([expect(s.observables[i]["N"],ρ) for i in 1:nv(s.lattice)]) / nv(s.lattice))
+
 # Generate a system from a lattice, a Hamiltonian,
 # a local tunnelling operator and jump operators
 s = NdSystem(L, H, -t/2., a, J, lobs)
-# Compute the steady state (by brute-force integration)
-ρ = steadystate.master(s)[2][end]
-# Merge two systems into some corner subspace spanned by 500 kets
-s2 = merge(s,s,1,ρ,ρ,500) # 4x4-site lattice
 # Find the steady-state density matrix by minimizing Lρ via the BiCGStab(l=4)
 # iterative method.
-ρ2 = steadystate_bicg(s2, 6; tol=1e-4, verbose=true)
-hermitianize!(ρ2)
-# Repeat the process
-s3 = merge(s2,s2,1,ρ2,ρ2,500) # 8x4-site lattice
-ρ3 = steadystate_bicg(s3, 6; tol=1e-4, verbose=true)
-hermitianize!(ρ3)
-# etc.
-s4 = merge(s3,s3,2,ρ3,ρ3,700) # 8x8-site lattice
-ρ4 = steadystate_bicg(s4, 6; tol=1e-4, verbose=true)
-hermitianize!(ρ4)
-
-mean_pop(s,ρ) = real(sum([expect(s.observables[i]["N"],ρ) for i in 1:nv(s.lattice)]) / nv(s.lattice))
-
-# Print some results
+@time ρ = steadystate_bicg(s, 6; tol=1e-4, verbose=true)
 println("\nIteration 1")
 println("Purity = ",real(tr(ρ*ρ)),"\n#states = ", real(exp(entropy_vn(ρ))))
 println("<N> = ",mean_pop(s,ρ))
 
+# Merge two systems into some corner subspace spanned by 500 kets
+s = merge(s,s,1,ρ,ρ,1000) # 6x3-site lattice
+# Find the steady-state density matrix
+@time ρ = steadystate_bicg(s, 6; tol=1e-4, verbose=true)
+hermitianize!(ρ)
 println("\nIteration 2")
-println("Purity = ",real(tr(ρ2*ρ2)),"\n#states = ", real(exp(entropy_vn(ρ2))))
-println("<N> = ",mean_pop(s2,ρ2))
+println("Purity = ",real(tr(ρ*ρ)),"\n#states = ", real(exp(entropy_vn(ρ))))
+println("<N> = ",mean_pop(s,ρ))
 
+# Repeat the process
+s = merge(s,s,2,ρ,ρ,1000) # 6x6-site lattice
+@time ρ = steadystate_bicg(s, 6; tol=1e-4, verbose=true)
+hermitianize!(ρ)
 println("\nIteration 3")
-println("Purity = ",real(tr(ρ3*ρ3)),"\n#states = ", real(exp(entropy_vn(ρ3))))
-println("<N> = ",mean_pop(s3,ρ3))
+println("Purity = ",real(tr(ρ*ρ)),"\n#states = ", real(exp(entropy_vn(ρ))))
+println("<N> = ",mean_pop(s,ρ))
 
+# Again
+s = merge(s,s,1,ρ,ρ,1000) # 12x6-site lattice
+@time ρ = steadystate_bicg(s, 6; tol=1e-4, verbose=true)
+hermitianize!(ρ)
 println("\nIteration 4")
-println("Purity = ",real(tr(ρ4*ρ4)),"\n#states = ", real(exp(entropy_vn(ρ4))))
-println("<N> = ",mean_pop(s4,ρ4))
+println("Purity = ",real(tr(ρ*ρ)),"\n#states = ", real(exp(entropy_vn(ρ))))
+println("<N> = ",mean_pop(s,ρ))
+
+# And again...
+@time s = merge(s,s,2,ρ,ρ,1000) # 12x12-site lattice
+@time ρ = steadystate_bicg(s, 6; tol=1e-4, verbose=true)
+hermitianize!(ρ)
+println("\nIteration 5")
+println("Purity = ",real(tr(ρ*ρ)),"\n#states = ", real(exp(entropy_vn(ρ))))
+println("<N> = ",mean_pop(s,ρ))
 ```
 ```julia-repl
 julia>
+# Steady-state determination time
+33.391954 seconds (8.91 M allocations: 3.878 GiB, 2.59% gc time)
 Iteration 1
-Purity = 0.9856262773126672
-#states = 1.0580681393505547
-<N> = 0.02135711148025299
+Purity = 0.9976260308338634
+#states = 1.0116079830412088
+<N> = 0.008365652074378548
 
+# Steady-state determination time
+481.051435 seconds (2.01 M allocations: 17.274 GiB, 0.49% gc time)
 Iteration 2
-Purity = 0.9380319564966497
-#states = 1.2614296231492617
-<N> = 0.011410774377058204
+Purity = 0.8243971487739387
+#states = 2.0868584800171677
+<N> = 0.022055165597897344
 
+# Steady-state determination time
+1127.749763 seconds (2.98 k allocations: 21.562 GiB, 0.25% gc time)
 Iteration 3
-Purity = 0.619858327346652
-#states = 3.8137560169203337
-<N> = 0.022882387269542788
+Purity = 0.647720358624363
+#states = 4.140104941776228
+<N> = 0.02456904145500847
 
+# Steady-state determination time
+2758.450997 seconds (553.93 k allocations: 26.773 GiB, 0.13% gc time)
 Iteration 4
-Purity = 0.03660696744651538
-#states = 130.393737931304
-<N> = 0.07190099978628699
+Purity = 0.30336292598866943
+#states = 22.89421659581906
+<N> = 0.03238841220844765
+
+# Merging time
+444.331974 seconds (4.01 M allocations: 9.778 GiB, 0.56% gc time)
+# Steady-state determination time
+5405.893048 seconds (1.00 M allocations: 30.020 GiB, 0.08% gc time)
+Iteration 4
+Purity = 0.02452649425569945
+#states = 246.1450221114231
+<N> = 0.05323380908335849
 ```
 
 ## References
