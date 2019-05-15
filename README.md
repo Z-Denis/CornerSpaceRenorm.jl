@@ -17,7 +17,7 @@ From the steady-states <img src="https://latex.codecogs.com/gif.latex?\hat{\rho}
 
 defined as
 
-<img src="https://latex.codecogs.com/gif.latex?\mathcal{P}^{(M)}(\hat{O}_A,\hat{O}_B)={\textstyle\sum_{k=1}^M}\langle\phi_{r_k}^{A}\rvert\hat{O}_A\lvert\phi_{r_{k^\prime}}^{A}\rangle\langle\phi_{r_k^\prime}^{B}\rvert\hat{O}_B\lvert\phi_{r_{k^\prime}^\prime}^{B}\rangle\lvert\phi_{r_k}^{A},\phi_{r_k^\prime}^{B}\rangle\langle\phi_{r_{k^\prime}}^{A},\phi_{r_{k^\prime}^\prime}^{B}\rvert" title="\mathcal{P}^{(M)}(\hat{O}_A,\hat{O}_B)={\textstyle\sum_{k=1}^M}\langle\phi_{r_k}^{A}\rvert\hat{O}_A\lvert\phi_{r_{k^\prime}}^{A}\rangle\langle\phi_{r_k^\prime}^{B}\rvert\hat{O}_B\lvert\phi_{r_{k^\prime}^\prime}^{B}\rangle\lvert\phi_{r_k}^{A},\phi_{r_k^\prime}^{B}\rangle\langle\phi_{r_{k^\prime}}^{A},\phi_{r_{k^\prime}^\prime}^{B}\rvert" />
+<img src="https://latex.codecogs.com/gif.latex?\mathcal{P}^{(M)}(\hat{O}_A,&space;\hat{O}_B)&space;=&space;{\textstyle\sum_{k,k^\prime=1}^M}\langle\phi_{r_k}^{A}\rvert\hat{O}_A\lvert\phi_{r_{k^\prime}}^{A}\rangle\langle\phi_{r_k^\prime}^{B}\rvert\hat{O}_B\lvert\phi_{r_{k^\prime}^\prime}^{B}\rangle&space;\lvert\phi_{r_k}^{A},&space;\phi_{r_k^\prime}^{B}\rangle\langle\phi_{r_{k^\prime}}^{A},&space;\phi_{r_{k^\prime}^\prime}^{B}\rvert" title="\mathcal{P}^{(M)}(\hat{O}_A, \hat{O}_B) = {\textstyle\sum_{k,k^\prime=1}^M}\langle\phi_{r_k}^{A}\rvert\hat{O}_A\lvert\phi_{r_{k^\prime}}^{A}\rangle\langle\phi_{r_k^\prime}^{B}\rvert\hat{O}_B\lvert\phi_{r_{k^\prime}^\prime}^{B}\rangle \lvert\phi_{r_k}^{A}, \phi_{r_k^\prime}^{B}\rangle\langle\phi_{r_{k^\prime}}^{A}, \phi_{r_{k^\prime}^\prime}^{B}\rvert" />
 
 For instance, the resulting Hamiltonian takes the form <img src="https://latex.codecogs.com/gif.latex?\hat{H}_{AB}^{(M)}&space;=&space;\mathcal{P}^{(M)}(\hat{H}_A,&space;\hat{1}_B)&space;&plus;&space;\mathcal{P}^{(M)}(\hat{1}_A,&space;\hat{H}_B)&space;&plus;&space;{\textstyle&space;\sum_{\langle&space;i\in&space;A;&space;j\in&space;B\rangle}}\mathcal{P}^{(M)}(\hat{O}_i^\dagger,&space;\hat{O}_j)&space;&plus;&space;\mathrm{H.c}" title="\hat{H}_{AB}^{(M)} = \mathcal{P}^{(M)}(\hat{H}_A, \hat{1}_B) + \mathcal{P}^{(M)}(\hat{1}_A, \hat{H}_B) + {\textstyle \sum_{\langle i\in A; j\in B\rangle}}\mathcal{P}^{(M)}(\hat{O}_i^\dagger, \hat{O}_j) + \mathrm{H.c}" />,
 
@@ -32,23 +32,6 @@ From the Pkg REPL (prefix `]`), type:
 ```
 
 ## Lattices
-
-####  SquareLattice (in deprecation process)
-
-```julia
-L = SquareLattice(nx,ny)
-```
-Construct an  `nx` times `ny` square lattice with open boundary conditions.
-```julia
-union(L1, L2)
-L1 ∪ L2
-```
-Merge two square lattices along some compatible dimension.
-```julia
-vunion(L1, L2)
-hunion(L1, L2)
-```
-Merge two square lattices either vertically or horizontally.
 
 ####  NdLattice
 
@@ -80,13 +63,6 @@ Generate a vector of jump operators for the lattice from a vector of local jump 
 ## Systems
 
 Corner merging and evolving functions take systems as arguments. Systems contain a lattice, a Hamiltonian, a set of jump operators, some other operators required during merging operations and a set of observables to be transformed into the corner subspace along with the Liouvillian.
-
-####  SquareSystem (in deprecation process)
-```julia
-SquareSystem(L, H, (t, lHt), J)
-SquareSystem(L, H, (t, lHt), J, obs)
-```
-Generate a system from a `SquareLattice`, a Hamiltonian, a tuple containing a tunnelling rate `t` and a local hopping operator `lHt` and a vector `J` of local jump operators. If passed, `obs` contains the observables to be transformed into the corner subspace along with the Liouvillian. Either a vector of `Dict` mapping some operator names (`String`) to some global operators or a vector of `Dict` mapping some operator names (`String`) to some local operators can be passed as argument.
 
 ####  NdSystem
 ```julia
@@ -123,39 +99,6 @@ We can then build a `ZnSystem` from it by simply using `NdSystem(L, H, t, lHt, J
 
 ## Corner operations
 
-#### On SquareSystem instances (in deprecation process)
-```julia
-s1Us2 = merge(s1, s2)
-```
-Compression-free merging of two square systems along any compatible direction.
-
-```julia
-s1Us2 = vmerge(s1, s2)
-```
-Compression-free vertical merging of two square systems.
-
-```julia
-s1Us2 = hmerge(s1, s2)
-```
-Compression-free horizontal merging of two square systems.
-
-```julia
-s1Us2 = merge(s1, s2, ρ1, ρ2, M)
-```
-Projection into the corner space spanned by the `M` most probable product states of the merging of two square systems along any compatible direction.
-
-```julia
-s1Us2 = vmerge(s1, s2, ρ1, ρ2, M)
-```
-Projection into the corner space spanned by the `M` most probable product states of the merging of two square systems along the vertical direction.
-
-```julia
-s1Us2 = hmerge(s1, s2, ρ1, ρ2, M)
-```
-Projection into the corner space spanned by the `M` most probable product states of the merging of two square systems along the horizontal direction.
-
-#### On NdSystem instances
-
 ```julia
 s1Us2 = merge(s1, s2, d, ρ1, ρ2, M)
 ```
@@ -172,10 +115,10 @@ Projection into the corner space spanned by the `M` most probable product states
 Evaluates the steady state by solving iteratively the linear system <img src="https://latex.codecogs.com/gif.latex?\mathcal{L}\hat{\rho}&space;=&space;0" title="\mathcal{L}\hat{\rho} = 0" /> via the stabilized biconjugate gradient method with `l` `GMRES` steps. The first line of the Liouvillian is overwritten to enforce a non-trivial trace one solution, this approximation yields an error of the order of the inverse of the square of the size of the Hilbert space.
 
 ```julia
-ρ = steadystate_bicg_LtL(H, J, l; log=false, kwargs...)
-ρ, log = steadystate_bicg_LtL(H, J, l; log=true, kwargs...)
-ρ = steadystate_bicg_LtL(s, l; log=false, kwargs...)
-ρ, log = steadystate_bicg_LtL(s, l; log=true, kwargs...)
+ρ = CornerSpaceRenorm.steadystate_bicg_LtL(H, J, l; log=false, kwargs...)
+ρ, log = CornerSpaceRenorm.steadystate_bicg_LtL(H, J, l; log=true, kwargs...)
+ρ = CornerSpaceRenorm.steadystate_bicg_LtL(s, l; log=false, kwargs...)
+ρ, log = CornerSpaceRenorm.steadystate_bicg_LtL(s, l; log=true, kwargs...)
 ```
 Evaluates the steady state by solving iteratively the linear system <img src="https://latex.codecogs.com/gif.latex?\langle\mathcal{L},\mathcal{L}\hat{\rho}\rangle&space;&plus;&space;\langle\mathrm{Tr},\hat{\rho}\rangle&space;\mathrm{Tr}&space;=&space;\mathrm{Tr}" title="\langle\mathcal{L},\mathcal{L}\hat{\rho}\rangle + \langle\mathrm{Tr},\hat{\rho}\rangle \mathrm{Tr} = \mathrm{Tr}" /> via the stabilized biconjugate gradient method with `l` `GMRES` steps. No approximation of the Liovillian is made in order to enfore the trace one but in practice convergence is slower and poorer.
 
@@ -260,7 +203,71 @@ julia> <sz> = -0.9667527388195073
 ```
 The corner has reached convergence up to the chosen tolerance.
 
-#### 8x8 hardcore-boson driven-dissipative lattice
+#### 4x4 hardcore-boson driven-dissipative lattice
+
+The data compiled in Table 1 of Ref. <b id="f1">[[1](#f1)]</b> obtained by using an independent MATLAB implementation of the corner space renormalization procedure can be easily reproduced with the following code:
+
+```julia
+using CornerSpaceRenorm, QuantumOptics
+
+# Local hard-core boson basis
+b = FockBasis(1)
+
+# Build some operators in the local basis
+lN = number(b)
+a = destroy(b)
+# Build a set of local observables in the local basis
+lobs = Dict("a"=>a)
+
+# Same parameters as for Table 1 of Ref. [1]
+γ  = 1. # Dissipation rate
+F  = 2. # Driving strength
+J  = 1. # tunneling rate
+Δω = 5. # Detuning
+z  = 4. # Coordination number
+
+M = 200 # Corner Space Dimension
+
+# 2x4 Bose-Hubbard lattice with periodic boundary conditions.
+L = NdLattice((2,4); periodic=true)
+# Local Hamiltonian
+lH = -Δω*lN + F*(a + dagger(a))
+H = hamiltonian(L, lH, -J/z, a)
+C = dissipators(L, [sqrt(γ) * a])
+
+# Generate a system from a lattice, a Hamiltonian,
+# a local tunnelling operator and jump operators
+s = NdSystem(L, H, -J/z, a, C, lobs)
+# Compute the steady state (by brute-force integration)
+ρ1 = steadystate_bicg(s, 6; tol=1e-6, verbose=true)
+# Merge two systems into some corner subspace spanned by M kets
+s2 = merge(s,s,1,ρ1,ρ1,M) # 4x4-site lattice
+# Find the steady-state density matrix by minimizing Lρ via the BiCGStab(l=4)
+# iterative method.
+ρ2 = steadystate_bicg(s2, 6; tol=1e-6, verbose=true)
+hermitianize!(ρ2)
+
+# Compute the density operators in the corner space
+gN = [dagger(s2.observables[i]["a"]) * s2.observables[i]["a"] for i in 1:nv(s2.lattice)]
+# Compute some observables
+N = [real.(expect(gN[i],ρ2)) for i in 1:nv(s2.lattice)]
+mean_N = sum(N) / nv(s2.lattice)
+mean_coh_re = real(sum([expect(s2.observables[i]["a"],ρ2) for i in 1:nv(s2.lattice)]) / nv(s2.lattice))
+mean_g2 = sum([real(expect(gN[e.src] * gN[e.dst],ρ2) / N[e.src] / N[e.dst]) for e in edges(s2.lattice)]) / ne(s2.lattice)
+
+# Print a line of Table 1
+println("M = ",M,"\tn = ",mean_N,"\tRe(<a>) = ",mean_coh_re,"\tg2<j,l> = ",mean_g2)
+```
+
+yielding
+
+```julia-repl
+julia> M = 200 n = 0.0953582079216167  Re(<a>) = 0.27677860030342605 g2<j,l> = 1.0609718397305627
+```
+
+which indeed matches the values of the 4th row of Table 1.
+
+#### 12x12 hardcore-boson driven-dissipative lattice
 
 ```julia
 using CornerSpaceRenorm, QuantumOptics
@@ -280,75 +287,99 @@ F = 1e-1κ # Driving strength
 t = 1.    # tunneling rate
 Δ = -1t   # Detuning
 
-# 2x4 Bose-Hubbard lattice with periodic boundary conditions.
+# Start from a 3x3 Bose-Hubbard lattice with periodic boundary conditions.
 # Dimension is guessed from the length of the shape tuple.
-L = NdLattice((2,4); periodic=true)
+L = NdLattice((3,3); periodic=true)
 # Local Hamiltonian
 lH = -Δ*N + F*(a + dagger(a))
 H = hamiltonian(L, lH, -t/2., a)
 J = dissipators(L, [sqrt(κ) * a])
 
+mean_pop(s,ρ) = real(sum([expect(s.observables[i]["N"],ρ) for i in 1:nv(s.lattice)]) / nv(s.lattice))
+
 # Generate a system from a lattice, a Hamiltonian,
 # a local tunnelling operator and jump operators
 s = NdSystem(L, H, -t/2., a, J, lobs)
-# Compute the steady state (by brute-force integration)
-ρ = steadystate.master(s)[2][end]
-# Merge two systems into some corner subspace spanned by 500 kets
-s2 = merge(s,s,1,ρ,ρ,500) # 4x4-site lattice
 # Find the steady-state density matrix by minimizing Lρ via the BiCGStab(l=4)
 # iterative method.
-ρ2 = steadystate_bicg(s2, 6; tol=1e-4, verbose=true)
-hermitianize!(ρ2)
-# Repeat the process
-s3 = merge(s2,s2,1,ρ2,ρ2,500) # 8x4-site lattice
-ρ3 = steadystate_bicg(s3, 6; tol=1e-4, verbose=true)
-hermitianize!(ρ3)
-# etc.
-s4 = merge(s3,s3,2,ρ3,ρ3,700) # 8x8-site lattice
-ρ4 = steadystate_bicg(s4, 6; tol=1e-4, verbose=true)
-hermitianize!(ρ4)
-
-mean_pop(s,ρ) = real(sum([expect(s.observables[i]["N"],ρ) for i in 1:nv(s.lattice)]) / nv(s.lattice))
-
-# Print some results
+@time ρ = steadystate_bicg(s, 6; tol=1e-4, verbose=true)
 println("\nIteration 1")
 println("Purity = ",real(tr(ρ*ρ)),"\n#states = ", real(exp(entropy_vn(ρ))))
 println("<N> = ",mean_pop(s,ρ))
 
+# Merge two systems into some corner subspace spanned by 500 kets
+s = merge(s,s,1,ρ,ρ,1000) # 6x3-site lattice
+# Find the steady-state density matrix
+@time ρ = steadystate_bicg(s, 6; tol=1e-4, verbose=true)
+hermitianize!(ρ)
 println("\nIteration 2")
-println("Purity = ",real(tr(ρ2*ρ2)),"\n#states = ", real(exp(entropy_vn(ρ2))))
-println("<N> = ",mean_pop(s2,ρ2))
+println("Purity = ",real(tr(ρ*ρ)),"\n#states = ", real(exp(entropy_vn(ρ))))
+println("<N> = ",mean_pop(s,ρ))
 
+# Repeat the process
+s = merge(s,s,2,ρ,ρ,1000) # 6x6-site lattice
+@time ρ = steadystate_bicg(s, 6; tol=1e-4, verbose=true)
+hermitianize!(ρ)
 println("\nIteration 3")
-println("Purity = ",real(tr(ρ3*ρ3)),"\n#states = ", real(exp(entropy_vn(ρ3))))
-println("<N> = ",mean_pop(s3,ρ3))
+println("Purity = ",real(tr(ρ*ρ)),"\n#states = ", real(exp(entropy_vn(ρ))))
+println("<N> = ",mean_pop(s,ρ))
 
+# Again
+s = merge(s,s,1,ρ,ρ,1000) # 12x6-site lattice
+@time ρ = steadystate_bicg(s, 6; tol=1e-4, verbose=true)
+hermitianize!(ρ)
 println("\nIteration 4")
-println("Purity = ",real(tr(ρ4*ρ4)),"\n#states = ", real(exp(entropy_vn(ρ4))))
-println("<N> = ",mean_pop(s4,ρ4))
+println("Purity = ",real(tr(ρ*ρ)),"\n#states = ", real(exp(entropy_vn(ρ))))
+println("<N> = ",mean_pop(s,ρ))
+
+# And again...
+@time s = merge(s,s,2,ρ,ρ,1000) # 12x12-site lattice
+@time ρ = steadystate_bicg(s, 6; tol=1e-4, verbose=true)
+hermitianize!(ρ)
+println("\nIteration 5")
+println("Purity = ",real(tr(ρ*ρ)),"\n#states = ", real(exp(entropy_vn(ρ))))
+println("<N> = ",mean_pop(s,ρ))
 ```
 ```julia-repl
 julia>
+# Steady-state determination time
+33.391954 seconds (8.91 M allocations: 3.878 GiB, 2.59% gc time)
 Iteration 1
-Purity = 0.9856262773126672
-#states = 1.0580681393505547
-<N> = 0.02135711148025299
+Purity = 0.9976260308338634
+#states = 1.0116079830412088
+<N> = 0.008365652074378548
 
+# Steady-state determination time
+481.051435 seconds (2.01 M allocations: 17.274 GiB, 0.49% gc time)
 Iteration 2
-Purity = 0.9380319564966497
-#states = 1.2614296231492617
-<N> = 0.011410774377058204
+Purity = 0.8243971487739387
+#states = 2.0868584800171677
+<N> = 0.022055165597897344
 
+# Steady-state determination time
+1127.749763 seconds (2.98 k allocations: 21.562 GiB, 0.25% gc time)
 Iteration 3
-Purity = 0.619858327346652
-#states = 3.8137560169203337
-<N> = 0.022882387269542788
+Purity = 0.647720358624363
+#states = 4.140104941776228
+<N> = 0.02456904145500847
 
+# Steady-state determination time
+2758.450997 seconds (553.93 k allocations: 26.773 GiB, 0.13% gc time)
 Iteration 4
-Purity = 0.03660696744651538
-#states = 130.393737931304
-<N> = 0.07190099978628699
+Purity = 0.30336292598866943
+#states = 22.89421659581906
+<N> = 0.03238841220844765
+
+# Merging time
+444.331974 seconds (4.01 M allocations: 9.778 GiB, 0.56% gc time)
+# Steady-state determination time
+5405.893048 seconds (1.00 M allocations: 30.020 GiB, 0.08% gc time)
+Iteration 4
+Purity = 0.02452649425569945
+#states = 246.1450221114231
+<N> = 0.05323380908335849
 ```
+In the last two steps, the entropy soared, a higher corner dimensions is thus to be chosen for convergence.
 
 ## References
 
