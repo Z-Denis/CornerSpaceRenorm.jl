@@ -65,7 +65,7 @@ function Base.show(io::IO, ::MIME"text/plain", L::NdLattice)
         print(io,"  Boundary conditions: open")
     end
 end
-Base.show(io::IO, ::MIME"application/prs.juno.inline", x::Lattice) = x
+Base.show(io::IO, ::MIME"application/prs.juno.inline", x::NdLattice) = x
 
 # Extend AbstractGraph{Int64} methods to all Lattice subtypes.
 @inline Base.eltype(L::Lattice) = Base.eltype(L.L);

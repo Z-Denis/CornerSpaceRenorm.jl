@@ -203,7 +203,71 @@ julia> <sz> = -0.9667527388195073
 ```
 The corner has reached convergence up to the chosen tolerance.
 
-#### 8x8 hardcore-boson driven-dissipative lattice
+#### 4x4 hardcore-boson driven-dissipative lattice
+
+The data compiled in Table 1 of Ref. <b id="f1">[[1](#f1)]</b> obtained by using an independent MATLAB implementation of the corner space renormalization procedure can be easily reproduced with the following code:
+
+```julia
+using CornerSpaceRenorm, QuantumOptics
+
+# Local hard-core boson basis
+b = FockBasis(1)
+
+# Build some operators in the local basis
+lN = number(b)
+a = destroy(b)
+# Build a set of local observables in the local basis
+lobs = Dict("a"=>a)
+
+# Same parameters as for Table 1 of Ref. [1]
+γ  = 1. # Dissipation rate
+F  = 2. # Driving strength
+J  = 1. # tunneling rate
+Δω = 5. # Detuning
+z  = 4. # Coordination number
+
+M = 200 # Corner Space Dimension
+
+# 2x4 Bose-Hubbard lattice with periodic boundary conditions.
+L = NdLattice((2,4); periodic=true)
+# Local Hamiltonian
+lH = -Δω*lN + F*(a + dagger(a))
+H = hamiltonian(L, lH, -J/z, a)
+C = dissipators(L, [sqrt(γ) * a])
+
+# Generate a system from a lattice, a Hamiltonian,
+# a local tunnelling operator and jump operators
+s = NdSystem(L, H, -J/z, a, C, lobs)
+# Compute the steady state (by brute-force integration)
+ρ1 = steadystate_bicg(s, 6; tol=1e-6, verbose=true)
+# Merge two systems into some corner subspace spanned by M kets
+s2 = merge(s,s,1,ρ1,ρ1,M) # 4x4-site lattice
+# Find the steady-state density matrix by minimizing Lρ via the BiCGStab(l=4)
+# iterative method.
+ρ2 = steadystate_bicg(s2, 6; tol=1e-6, verbose=true)
+hermitianize!(ρ2)
+
+# Compute the density operators in the corner space
+gN = [dagger(s2.observables[i]["a"]) * s2.observables[i]["a"] for i in 1:nv(s2.lattice)]
+# Compute some observables
+N = [real.(expect(gN[i],ρ2)) for i in 1:nv(s2.lattice)]
+mean_N = sum(N) / nv(s2.lattice)
+mean_coh_re = real(sum([expect(s2.observables[i]["a"],ρ2) for i in 1:nv(s2.lattice)]) / nv(s2.lattice))
+mean_g2 = sum([real(expect(gN[e.src] * gN[e.dst],ρ2) / N[e.src] / N[e.dst]) for e in edges(s2.lattice)]) / ne(s2.lattice)
+
+# Print a line of Table 1
+println("M = ",M,"\tn = ",mean_N,"\tRe(<a>) = ",mean_coh_re,"\tg2<j,l> = ",mean_g2)
+```
+
+yielding
+
+```julia-repl
+julia> M = 200 n = 0.0953582079216167  Re(<a>) = 0.27677860030342605 g2<j,l> = 1.0609718397305627
+```
+
+which indeed matches the values of the 4th row of Table 1.
+
+#### 12x12 hardcore-boson driven-dissipative lattice
 
 ```julia
 using CornerSpaceRenorm, QuantumOptics
@@ -315,6 +379,7 @@ Purity = 0.02452649425569945
 #states = 246.1450221114231
 <N> = 0.05323380908335849
 ```
+In the last two steps, the entropy soared, a higher corner dimensions is thus to be chosen for convergence.
 
 ## References
 
