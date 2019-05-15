@@ -9,44 +9,6 @@ Abstract supertype for all lattices.
 abstract type Lattice <: AbstractLattice end
 
 """
-    SquareLattice <: Lattice
-
-Square lattice type.
-"""
-struct SquareLattice <: Lattice
-    L::SimpleGraph{Int64}
-    nx::Int64
-    ny::Int64
-
-    Vtop::Vector{Int64}
-    Vbottom::Vector{Int64}
-    Vleft::Vector{Int64}
-    Vright::Vector{Int64}
-
-    pbc::Bool
-end
-
-"""
-    SquareLattice(nx, ny; periodic = false)
-
-Construct a `SquareLattice` of size `nx`*`ny`.
-
-# Arguments
-* `nx`: size of the first dimension.
-* `ny`: size of the second dimension.
-* `periodic=false`: boundary conditions.
-"""
-function SquareLattice(nx::Integer,ny::Integer;periodic::Bool = false)
-    L = Grid([nx, ny];periodic=periodic);
-    V = vertices(L)
-    Vtop    = [V[nx*i+1] for i in 0:ny-1];
-    Vbottom = [V[nx*i] for i in 1:ny];
-    Vleft   = V[1:nx];
-    Vright  = V[end-nx+1:end];
-    return SquareLattice(L,nx,ny,Vtop,Vbottom,Vleft,Vright,periodic)
-end
-
-"""
     NdLattice{N} <: Lattice
 
 Z^`N` lattice type. Generic lattice with `N` directions.
@@ -102,59 +64,6 @@ end
 
 GraphPlot.gplot(L::Lattice; kwargs...) = GraphPlot.gplot(L.L; kwargs...)
 GraphPlot.gplot(L::Lattice, locs_x_in::Vector{R}, locs_y_in::Vector{R}; kwargs...) where R<:Real = GraphPlot.gplot(L.L, locs_x_in, locs_y_in; kwargs...)
-
-"""
-    ∪(L1, L2)
-
-Merge two `SquareLattice`s along some compatible dimension.
-"""
-function Base.:union(L1::SquareLattice,L2::SquareLattice)
-    @assert L1.pbc == L2.pbc "Cannot merge lattices with different boundary conditions."
-    if L1.ny == L2.ny
-        return vunion(L1,L2)
-    elseif L1.nx == L2.nx
-        return hunion(L1,L2)
-    else
-        throw(DimensionMismatch("Incompatible lattice sizes: ($(L1.nx),$(L1.ny)) and ($(L2.nx),$(L2.ny))"))
-    end
-end
-
-"""
-    vunion(L1, L2)
-
-Merge two `SquareLattice`s `L1` and `L2` vertically.
-"""
-function vunion(L1::SquareLattice,L2::SquareLattice)
-    L1.ny == L2.ny || throw(DimensionMismatch("Incompatible lattice sizes: ($(L1.nx),$(L1.ny)) and ($(L2.nx),$(L2.ny))"))
-    @assert L1.pbc == L2.pbc "Cannot merge lattices with different boundary conditions."
-    L = blockdiag(L1.L,L2.L);
-    for i in 1:L1.ny
-        add_edge!(L,Edge(L1.Vbottom[i],nv(L1)+L2.Vtop[i]))
-    end
-
-    return SquareLattice(L,L1.nx+L2.nx,L1.ny,L1.Vtop, nv(L1).+L2.Vbottom,
-                                             L1.Vleft ∪ (nv(L1).+L2.Vleft),
-                                             L1.Vright ∪ (nv(L1).+L2.Vright),
-                                             L1.pbc)
-end
-
-"""
-    hunion(L1, L2)
-
-Merge two `SquareLattice`s `L1` and `L2` horizontally.
-"""
-function hunion(L1::SquareLattice,L2::SquareLattice)
-    L1.nx == L2.nx || throw(DimensionMismatch("Incompatible lattice sizes: ($(L1.nx),$(L1.ny)) and ($(L2.nx),$(L2.ny))"))
-    @assert L1.pbc == L2.pbc "Cannot merge lattices with different boundary conditions."
-    L = blockdiag(L1.L,L2.L);
-    for i in 1:L1.nx
-        add_edge!(L,Edge(L1.Vright[i],nv(L1)+L2.Vleft[i]))
-    end
-
-    return SquareLattice(L,L1.nx,L1.ny+L2.ny,L1.Vtop ∪ (nv(L1).+L2.Vtop),
-                                             L1.Vbottom ∪ (nv(L1).+L2.Vbottom),
-                                             L1.Vleft, nv(L1).+L2.Vright, L1.pbc)
-end
 
 function rem_boundaries!(L::NdLattice{N}, d::Int) where N
     if L.pbc == true && L.shape[d] > 2
@@ -216,73 +125,6 @@ end
 Abstract supertype for all systems.
 """
 abstract type AbstractSystem end
-
-"""
-    SquareSystem <: AbstractSystem
-
-Quantum dissipative system defined on a square lattice.
-"""
-struct SquareSystem{B<:Basis,
-              O1<:AbstractOperator{B,B},O2<:AbstractOperator{B,B},
-              O3<:AbstractOperator{B,B},O4<:AbstractOperator{B,B}} <: AbstractSystem
-    # Lattice
-    lattice::SquareLattice
-    # Bases
-    gbasis::B
-    # Operators
-    H::O1
-    Httop::Vector{O2}
-    Htbottom::Vector{O2}
-    Htleft::Vector{O2}
-    Htright::Vector{O2}
-    J::Vector{O3}
-    observables::Vector{Dict{String,O4}}
-end
-
-"""
-    SquareSystem(lat, H, lHt, J)
-
-Construct a `SquareSystem` from a `Lattice` and operators defining the model.
-# Arguments
-* `lat`: `Lattice`.
-* `H`: Hamiltonian of the full system.
-* `lHt`: local tunneling operator.
-* `J`: jump operators of the full system.
-"""
-function SquareSystem(lat::SquareLattice,H::O1,lHt::O2,J::Vector{O3},obs::Union{Vector{Dict{String,O4}},Missing}=missing) where {N,L<:Lattice,LB<:Basis,
-                                                       B<:CompositeBasis{Tuple{Vararg{LB,N}}},
-                                                       O1<:AbstractOperator{B,B},
-                                                       O2<:AbstractOperator{LB,LB},
-                                                       O3<:AbstractOperator{B,B},
-                                                       O4<:AbstractOperator{B,B}}
-    gbasis = H.basis_l;
-    @assert nv(lat) == length(gbasis.bases)
-    @assert lHt.basis_l == first(gbasis.bases)
-    @assert H.basis_r == H.basis_l == gbasis
-    @assert first(J).basis_l == gbasis
-    @assert first(J).basis_r == gbasis
-    @assert ismissing(obs) || length(obs) == nv(lat)
-    Httop    = [embed(gbasis,[i],[lHt]) for i in lat.Vtop]
-    Htbottom = [embed(gbasis,[i],[lHt]) for i in lat.Vbottom]
-    Htleft   = [embed(gbasis,[i],[lHt]) for i in lat.Vleft]
-    Htright  = [embed(gbasis,[i],[lHt]) for i in lat.Vright]
-    if ismissing(obs)
-        return SquareSystem{B,O1,eltype(Httop),O3,typeof(H)}(lat,gbasis,H,Httop,Htbottom,Htleft,Htright,J,[Dict{String,typeof(H)}() for i in 1:nv(lat)])
-    else
-        return SquareSystem{B,O1,eltype(Httop),O3,O4}(lat,gbasis,H,Httop,Htbottom,Htleft,Htright,J,obs)
-    end
-end
-
-function SquareSystem(lat::SquareLattice,H::O1,lHt::O2,J::Vector{O3},lobs::Dict{String,O4}) where {N,LB<:Basis,
-                                                       B<:CompositeBasis{Tuple{Vararg{LB,N}}},
-                                                       O1<:AbstractOperator{B,B},
-                                                       O2<:AbstractOperator{LB,LB},
-                                                       O3<:AbstractOperator{B,B},
-                                                       O4<:AbstractOperator{LB,LB}}
-    gbasis = H.basis_l;
-    obs = [Dict([name => embed(gbasis,i,lop) for (name,lop) in lobs]) for i in 1:nv(lat)]
-    return SquareSystem(lat,H,lHt,J,obs)
-end
 
 """
     NdSystem <: AbstractSystem

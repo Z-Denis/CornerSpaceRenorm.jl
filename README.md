@@ -33,23 +33,6 @@ From the Pkg REPL (prefix `]`), type:
 
 ## Lattices
 
-####  SquareLattice (in deprecation process)
-
-```julia
-L = SquareLattice(nx,ny)
-```
-Construct an  `nx` times `ny` square lattice with open boundary conditions.
-```julia
-union(L1, L2)
-L1 ∪ L2
-```
-Merge two square lattices along some compatible dimension.
-```julia
-vunion(L1, L2)
-hunion(L1, L2)
-```
-Merge two square lattices either vertically or horizontally.
-
 ####  NdLattice
 
 ```julia
@@ -80,13 +63,6 @@ Generate a vector of jump operators for the lattice from a vector of local jump 
 ## Systems
 
 Corner merging and evolving functions take systems as arguments. Systems contain a lattice, a Hamiltonian, a set of jump operators, some other operators required during merging operations and a set of observables to be transformed into the corner subspace along with the Liouvillian.
-
-####  SquareSystem (in deprecation process)
-```julia
-SquareSystem(L, H, (t, lHt), J)
-SquareSystem(L, H, (t, lHt), J, obs)
-```
-Generate a system from a `SquareLattice`, a Hamiltonian, a tuple containing a tunnelling rate `t` and a local hopping operator `lHt` and a vector `J` of local jump operators. If passed, `obs` contains the observables to be transformed into the corner subspace along with the Liouvillian. Either a vector of `Dict` mapping some operator names (`String`) to some global operators or a vector of `Dict` mapping some operator names (`String`) to some local operators can be passed as argument.
 
 ####  NdSystem
 ```julia
@@ -122,39 +98,6 @@ L = union(L,L,2)
 We can then build a `ZnSystem` from it by simply using `NdSystem(L, H, t, lHt, J)` or any other `NdSystem` constructor.
 
 ## Corner operations
-
-#### On SquareSystem instances (in deprecation process)
-```julia
-s1Us2 = merge(s1, s2)
-```
-Compression-free merging of two square systems along any compatible direction.
-
-```julia
-s1Us2 = vmerge(s1, s2)
-```
-Compression-free vertical merging of two square systems.
-
-```julia
-s1Us2 = hmerge(s1, s2)
-```
-Compression-free horizontal merging of two square systems.
-
-```julia
-s1Us2 = merge(s1, s2, ρ1, ρ2, M)
-```
-Projection into the corner space spanned by the `M` most probable product states of the merging of two square systems along any compatible direction.
-
-```julia
-s1Us2 = vmerge(s1, s2, ρ1, ρ2, M)
-```
-Projection into the corner space spanned by the `M` most probable product states of the merging of two square systems along the vertical direction.
-
-```julia
-s1Us2 = hmerge(s1, s2, ρ1, ρ2, M)
-```
-Projection into the corner space spanned by the `M` most probable product states of the merging of two square systems along the horizontal direction.
-
-#### On NdSystem instances
 
 ```julia
 s1Us2 = merge(s1, s2, d, ρ1, ρ2, M)
