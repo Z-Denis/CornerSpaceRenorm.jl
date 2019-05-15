@@ -13,6 +13,7 @@ the square of the size of the Hilbert space.
 * `H`: dense Hamiltonian.
 * `J`: array of dense jump operators.
 * `l`: number of GMRES steps per iteration.
+* `kwargs...`: Further arguments are passed on to the iterative solver.
 
 See also: [`CornerSpaceRenorm.steadystate_bicg_LtL`](@ref)
 """
@@ -167,6 +168,7 @@ convergence is slower and poorer.
 # Arguments
 * `s`: Instance of any subtype of `AbstractSystem`.
 * `l`: number of GMRES steps per iteration.
+* `kwargs...`: Further arguments are passed on to the iterative solver.
 
 See also: [`steadystate_bicg`](@ref)
 """
@@ -179,6 +181,6 @@ Calculate steady state using long time master equation evolution.
 
 # Arguments
 * `s`: Instance of any subtype of `AbstractSystem`.
-* `kwargs...`: see the main method docstring.
+* `kwargs...`: Further arguments are passed on to the iterative solver.
 """
 QuantumOptics.steadystate.master(s::AbstractSystem; kwargs...) = QuantumOptics.steadystate.master(s.H, s.J; kwargs...)
