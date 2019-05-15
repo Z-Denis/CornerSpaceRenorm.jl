@@ -89,6 +89,14 @@ using Test, InteractiveUtils
                 L = union(L,L,1)
             end
             compare_lattices(L, NdLattice((8,); periodic=true))
+
+            # Dummy tests on plotting
+            x = gplot(L)
+            y = gplot(L.L)
+            @test typeof(x) == typeof(y)
+            x = gplot(L, Float64.(collect(1:nv(L))), Float64.(collect(1:nv(L))))
+            y = gplot(L.L, Float64.(collect(1:nv(L))), Float64.(collect(1:nv(L))))
+            @test all([typeof(getfield(x,f)) == typeof(getfield(y,f)) for f in fieldnames(typeof(x))])
         end;
 
         @testset "NdSystem" begin
@@ -201,6 +209,20 @@ using Test, InteractiveUtils
                 end
             end
             # TO DO: Test construction and merging of generic lattices
+
+            # Dummy tests on plotting
+            L = NdLattice((4,))
+            s = NdSystem(L, H, (V/4,), sz, J)
+            x = gplot(s)
+            y = gplot(L.L)
+            @test typeof(x) == typeof(y)
+            x = plot_system(s)
+            @test typeof(x) == typeof(y)
+            x = gplot(s, Float64.(collect(1:nv(L))), Float64.(collect(1:nv(L))))
+            y = gplot(L.L, Float64.(collect(1:nv(L))), Float64.(collect(1:nv(L))))
+            @test all([typeof(getfield(x,f)) == typeof(getfield(y,f)) for f in fieldnames(typeof(x))])
+            x = plot_system(s, Float64.(collect(1:nv(L))), Float64.(collect(1:nv(L))))
+            @test all([typeof(getfield(x,f)) == typeof(getfield(y,f)) for f in fieldnames(typeof(x))])
         end;
 
         @testset "CornerBasis" begin
@@ -403,7 +425,9 @@ using Test, InteractiveUtils
         @test typeof(log) == ConvergenceHistory{true,Nothing}
         ρ4 = CornerSpaceRenorm.steadystate_bicg_LtL(s1)
         @test fidelity(ρ1, ρ4) ≈ 1. atol=1e-5
-        ρ5, log = steadystate_bicg(s1; log=true)
+        ρ, log = steadystate_bicg(s1; log=true)
+        @test typeof(log) == ConvergenceHistory{true,Nothing}
+        ρ, log = CornerSpaceRenorm.steadystate_bicg_LtL(s1; log=true)
         @test typeof(log) == ConvergenceHistory{true,Nothing}
     end;
 
