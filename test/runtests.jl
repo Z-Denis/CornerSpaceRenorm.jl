@@ -3,6 +3,17 @@ using LightGraphs, GraphPlot
 using LinearAlgebra, IterativeSolvers, Random
 using Test, InteractiveUtils
 
+macro no_error(ex)
+    quote
+        try
+            $(esc(ex))
+            true
+        catch
+            false
+        end
+    end
+end
+
 @testset "CornerSpaceRenorm" begin
     @testset "Operators" begin
         lb = FockBasis(1)
@@ -91,12 +102,25 @@ using Test, InteractiveUtils
             compare_lattices(L, NdLattice((8,); periodic=true))
 
             # Dummy tests on plotting
+            L = NdLattice((2,2);periodic=true)
+            @test @no_error gplot(L)
+            @test @no_error gplot(L, Float64.(collect(1:nv(L))), Float64.(collect(1:nv(L))))
             x = gplot(L)
             y = gplot(L.L)
             @test typeof(x) == typeof(y)
             x = gplot(L, Float64.(collect(1:nv(L))), Float64.(collect(1:nv(L))))
             y = gplot(L.L, Float64.(collect(1:nv(L))), Float64.(collect(1:nv(L))))
             @test all([typeof(getfield(x,f)) == typeof(getfield(y,f)) for f in fieldnames(typeof(x))])
+
+            # Test pretty-printing
+            L = NdLattice((2,2);periodic=true)
+            @test @no_error repr(L)
+            @test @no_error repr(MIME("text/plain"),L)
+            @test @no_error repr(MIME("application/prs.juno.inline"),L)
+            L = NdLattice((2,2);periodic=false)
+            @test @no_error repr(L)
+            @test @no_error repr(MIME("text/plain"),L)
+            @test @no_error repr(MIME("application/prs.juno.inline"),L)
         end;
 
         @testset "NdSystem" begin
@@ -132,10 +156,6 @@ using Test, InteractiveUtils
             # Test constructor with missing observables
             s = NdSystem(L, H, (V/4,), sz, J)
             @test eltype(s.observables) == Dict{String,typeof(H)}
-
-            # Broken tests on displaying lattices
-            @test_skip gplot(L) == gplot(L.L)
-            @test_skip plot_system(s) == gplot(s.lattice.L)
 
             # Broken: cannot construct a system with 1 site.
 
@@ -207,12 +227,24 @@ using Test, InteractiveUtils
                     @test maximum([maximum(abs2.(eigvals(sUs.Htint[d][i].data) .- eigvals(Matrix(s2.Htint[d][i].data)))) for i in 1:length(sUs.Htint[d])]) ≈ 0. atol=eps(Float64)
                     @test maximum([maximum(abs2.(eigvals(sUs.Htext[d][i].data) .- eigvals(Matrix(s2.Htext[d][i].data)))) for i in 1:length(sUs.Htext[d])]) ≈ 0. atol=eps(Float64)
                 end
+
+                # Test pretty-printing
+                @test @no_error repr(s)
+                @test @no_error repr(MIME("text/plain"),s)
+                @test @no_error repr(MIME("application/prs.juno.inline"),s)
+                @test @no_error repr(sUs)
+                @test @no_error repr(MIME("text/plain"),sUs)
+                @test @no_error repr(MIME("application/prs.juno.inline"),sUs)
             end
             # TO DO: Test construction and merging of generic lattices
 
             # Dummy tests on plotting
             L = NdLattice((4,))
             s = NdSystem(L, H, (V/4,), sz, J)
+            @test @no_error gplot(s)
+            @test @no_error gplot(s, Float64.(collect(1:nv(L))), Float64.(collect(1:nv(L))))
+            @test @no_error plot_system(s)
+            @test @no_error plot_system(s, Float64.(collect(1:nv(L))), Float64.(collect(1:nv(L))))
             x = gplot(s)
             y = gplot(L.L)
             @test typeof(x) == typeof(y)
@@ -246,6 +278,11 @@ using Test, InteractiveUtils
             @test bC !== bC2
             bC2 = CornerBasis(bC.shape,bC.M,vcat(bC.local_shapes, [[1]]))
             @test bC !== bC2
+
+            # Test pretty-printing
+            @test @no_error repr(bC)
+            @test @no_error repr(MIME("text/plain"),bC)
+            @test @no_error repr(MIME("application/prs.juno.inline"),bC)
         end;
     end;
 

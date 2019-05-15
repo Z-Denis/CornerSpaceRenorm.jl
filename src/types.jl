@@ -48,6 +48,25 @@ function NdLattice(shape::Tuple{Vararg{Int,N}};periodic::Bool = false) where N
     end
 end
 
+Base.show(io::IO, L::NdLattice) = L.pbc ? print(io,join([string(s) for s in L.shape], " x "), " NdLattice with PBC") : print(io,join([string(s) for s in L.shape], " x "), " NdLattice with OBC");
+function Base.show(io::IO, ::MIME"text/plain", L::NdLattice)
+    print(io,string(typeof(L)),":\n")
+    print(io,"  Shape: ",join([string(s) for s in L.shape], " x "),"\n")
+    print(io,"  Boundaries:\n")
+    for d in 1:length(L.shape)
+        print(io,"  d = ",d,":\n")
+        print(io,"    Input vertices: ",L.Vint[d],"\n")
+        print(io,"    Input vertices: ",L.Vext[d],"\n")
+    end
+
+    if L.pbc
+        print(io,"  Boundary conditions: periodic")
+    else
+        print(io,"  Boundary conditions: open")
+    end
+end
+Base.show(io::IO, ::MIME"application/prs.juno.inline", x::Lattice) = x
+
 # Extend AbstractGraph{Int64} methods to all Lattice subtypes.
 @inline Base.eltype(L::Lattice) = Base.eltype(L.L);
 @inline LightGraphs.vertices(L::Lattice) = LightGraphs.vertices(L.L);
@@ -215,6 +234,40 @@ function NdSystem(lat::NdLattice{M},H::O1,trate::Number,lHt::O2,J::Vector{O3},lo
     return NdSystem(lat,H,Tuple([trate for i in 1:M]),lHt,J,lobs)
 end
 
+function Base.show(io::IO, s::NdSystem)
+    s.lattice.pbc ? print(io,join([string(_s) for _s in s.lattice.shape], " x "), " NdSystem with PBC") : print(io,join([string(_s) for _s in s.lattice.shape], " x "), " NdSystem with OBC");
+    if typeof(s.gbasis) <: CompositeBasis && all([s.gbasis.bases[i] == s.gbasis.bases[1] for i in 1:length(s.gbasis.bases)])
+        print(io, " and local basis: ")
+        Base.show(io, first(s.gbasis.bases))
+    else
+        print(io, " and global basis: ")
+        Base.show(io, s.gbasis)
+    end
+end
+function Base.show(io::IO, ::MIME"text/plain", s::NdSystem)
+    print(io, "NdSystem:\n")
+    print(io,"  Lattice: ")
+    Base.show(io,s.lattice)
+    if typeof(s.gbasis) <: CompositeBasis && all([s.gbasis.bases[i] == s.gbasis.bases[1] for i in 1:length(s.gbasis.bases)])
+        print(io, "\n  Homogeneous local basis: ")
+        Base.show(io, first(s.gbasis.bases))
+    else
+        print(io, "\n  Global basis: ")
+        Base.show(io, s.gbasis)
+    end
+    print(io,"\n  Hamiltonian: ",join([string(_s) for _s in size(s.H)], " x ")," ",typeof(s.H).name,"\n")
+    print(io,"  ",length(s.J)," lindblad ops: ",join([string(_s) for _s in size(first(s.J))], " x ")," ",typeof(first(s.J)).name,"\n")
+    print(io, "  Tunneling rates: \n")
+    for d in 1:length(s.lattice.shape)
+        print(io,"    d = ",d,": ",s.trate[d],"\n")
+    end
+    obs_names = unique(keys.(s.observables))
+    if length(obs_names) == 1
+        print(io, "  Local observables: ",join([obs for obs in obs_names[1]], ", "))
+    end
+end
+Base.show(io::IO, ::MIME"application/prs.juno.inline", x::NdSystem) = x
+
 GraphPlot.gplot(s::AbstractSystem; kwargs...) = GraphPlot.gplot(s.lattice.L; kwargs...)
 GraphPlot.gplot(s::AbstractSystem, locs_x_in::Vector{R}, locs_y_in::Vector{R}; kwargs...) where R<:Real = GraphPlot.gplot(s.lattice.L, locs_x_in, locs_y_in; kwargs...)
 
@@ -265,3 +318,6 @@ import Base: ==
 ==(b1::CornerBasis, b2::CornerBasis) = (b1.M .== b2.M) &&
                                        (b1.shape == b2.shape) &&
                                        all(b1.local_shapes .== b2.local_shapes)
+
+Base.show(io::IO, cb::CornerBasis) = print(io,"CornerBasis with dimension M = ",cb.M);
+Base.show(io::IO, ::MIME"application/prs.juno.inline", x::CornerBasis) = x
