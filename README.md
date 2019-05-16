@@ -50,11 +50,11 @@ Hamiltonian and dissipators can be built from a lattice and some input operators
 ```julia
 hamiltonian(L, lH, t, lHt)
 ```
-Generate a Hamiltonian for a lattice from some local Hamiltonian `lH` and a local hopping operator `lHt` with associated tunnelling rate `t` as <img src="https://latex.codecogs.com/gif.latex?{\textstyle&space;\sum_i}\hat{\texttt{lH}}_i&space;&plus;&space;{\textstyle&space;\sum_{\langle&space;i;j\rangle}}&space;(t\times\hat{\texttt{lHt}}_i\otimes\hat{\texttt{lHt}}_j^\dagger&space;&plus;&space;\mathrm{H.c.})" title="{\textstyle \sum_i}\hat{\texttt{lH}}_i + {\textstyle \sum_{\langle i;j\rangle}} (t\times\hat{\texttt{lHt}}_i\otimes\hat{\texttt{lHt}}_j^\dagger + \mathrm{H.c.})" />.
+Generate a Hamiltonian for a lattice from some local Hamiltonian `lH` and a local hopping operator `lHt` with associated nearest-neighbors coupling rate `t` as <img src="https://latex.codecogs.com/gif.latex?{\textstyle&space;\sum_i}\hat{\texttt{lH}}_i&space;&plus;&space;{\textstyle&space;\sum_{\langle&space;i;j\rangle}}&space;(t\times\hat{\texttt{lHt}}_i\otimes\hat{\texttt{lHt}}_j^\dagger&space;&plus;&space;\mathrm{H.c.})" title="{\textstyle \sum_i}\hat{\texttt{lH}}_i + {\textstyle \sum_{\langle i;j\rangle}} (t\times\hat{\texttt{lHt}}_i\otimes\hat{\texttt{lHt}}_j^\dagger + \mathrm{H.c.})" />.
 ```julia
 hamiltonian(L, lH, (t1,t2, ... ,tN), lHt)
 ```
-Generate a Hamiltonian for a `NdLattice` in the same way but with anisotropic tunnelling rates.
+Generate a Hamiltonian for a `NdLattice` in the same way but with anisotropic nearest-neighbors coupling rates.
 ```julia
 dissipators(L, J)
 ```
@@ -71,7 +71,7 @@ NdSystem(L, H, (t1,t2, ... ,tN), lHt, J)
 NdSystem(L, H, t, J, lHt, obs)
 NdSystem(L, H, (t1,t2, ... ,tN), J, lHt, obs)
 ```
-Generate a system from a `NdLattice`, a Hamiltonian, either a single tunnelling rate `t` (isotropic system) or a tuple with as many rates as lattice dimensions (anisotropic system), and a local hopping operator `lHt` and a vector `J` of local jump operators. If passed, `obs` contains the observables to be transformed into the corner subspace along with the Liouvillian. Either a vector of `Dict` mapping some operator names (`String`) to some global operators or a vector of `Dict` mapping some operator names (`String`) to some local operators can be passed as argument.
+Generate a system from a `NdLattice`, a Hamiltonian, either a single nearest-neighbors coupling rate `t` (isotropic system) or a tuple with as many rates as lattice dimensions (anisotropic system), and a local hopping operator `lHt` and a vector `J` of local jump operators. If passed, `obs` contains the observables to be transformed into the corner subspace along with the Liouvillian. Either a vector of `Dict` mapping some operator names (`String`) to some global operators or a vector of `Dict` mapping some operator names (`String`) to some local operators can be passed as argument.
 
 ## More generic Lattices
 
@@ -383,4 +383,4 @@ In the last two steps, the entropy soared, a higher corner dimensions is thus to
 
 ## References
 
-<b id="f1">[1]</b> S. Finazzi, A. Le Boité, F. Storme, A. Baksic, and C. Ciuti, Corner-Space Renormalization Method for Driven-Dissipative Two-Dimensional Correlated Systems, [Phys. Rev. Lett. 115, 080604 (2015)](https://doi.org/10.1103/PhysRevLett.115.080604) [↩](#a1)
+<b id="f1">[1]</b> S. Finazzi, A. Le Boité, F. Storme, A. Baksic, and C. Ciuti, Corner-Space Renormalization Method for Driven-Dissipative Two-Dimensional Correlated Systems, [Phys. Rev. Lett. 115, 080604 (2015)](https://doi.org/10.1103/PhysRevLett.115.080604) (thereby results were obtained by the authors using a former independent MATLAB implementation)[↩](#a1)
