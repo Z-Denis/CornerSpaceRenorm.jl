@@ -33,7 +33,7 @@ From the Pkg REPL (prefix `]`), type:
 
 ## Lattices
 
-####  NdLattice
+#### NdLattice
 
 ```julia
 L = NdLattice((n1, n2, ... , nN); periodic=true/false)
@@ -44,17 +44,52 @@ union(L1, L2, d)
 ```
 Merge two N-dimensional lattices along the dimension `d`.
 
+#### More generic lattices
+
+The corner space renormalization method was successfully applied to non-cubic lattices such as Lieb lattices<sup id="a2">[2](#f2)</sup> . Even though the above-presented `NdLattice` constructor builds by default N-dimensional cubic lattices, it is possible to define generic unit cells by calling directly the default constructor `NdLattice{N}(g, shape, Vint, Vext, pbc)`, where `N` is the number of dimensions, `g` is some arbitrary `LightGraphs.SimpleGraph` (unit cell), `shape` is the shape (`Tuple`) of the cubic lattice in which one wishes to embed the arbitrary unit cell,`Vint` is a tuple which i-th entry contains a vector of input vertices along the i-th dimension, `Vext` is a tuple which i-th entry contains a vector of output vertices along the i-th dimension and `pbc` is to be set to either `true` or `false` for either periodic or open boundary conditions. During the merging of two such lattices `L1` and `L2`, vertices belonging to `L1.Vext` are connected to `L2.Vint` (and reciprocally for `pbc=true`). The `shape` argument is used when `pbc=true`, for instance a one-dimensional periodic lattice `L=NdLattice((2,); periodic=true)` of size `2` (`L.shape[1] < 3`) has no supplementary edges with respect to its open boundary conditions counterpart (`NdLattice((2,); periodic=false)`) but once doubled `L2=union(L1,L1,1)` (`L2.shape[1] > 3`) a supplementary edge is added to complete the loop. This behavior is taken care of similarly for generic lattices provided a proper shape was chosen at construction.
+
+For instance, let us consider a Lieb lattice which unit cell is defined as follows:
+
+<p align="center">
+  <img src="https://github.com/Z-Denis/CornerSpaceRenorm.jl/blob/development/fig_Lieb.png" align="center" height="200" width="200" ></a>
+</p>
+
+such a lattice can be built as a two-dimensional `NdLattice` starting from a 3-vertex path graph and specifying custom input and output vertices for each merging direction:
+
+```julia
+using LightGraphs
+
+D = 2                # #dimensions
+a = 1; b = 2; c = 3; # vertex names
+shape = (2, 2)       # shape of the unit cell
+pbc = true           # Boundary conditions
+Vin_1  = [b]         # Input vertices in direction d=1
+Vout_1 = [c]         # Output vertices in direction d=1
+Vin_2  = [b]         # Input vertices in direction d=2
+Vout_2 = [a]         # Output vertices in direction d=2
+unit_cell = PathGraph(3)
+
+L = NdLattice{D}(unit_cell, shape, (Vin_1, Vin_2), (Vout_1, Vout_2), pbc)
+```
+
+In this example, one declares the input (resp. output) vertices for the first and second dimension, if we append two such lattices `L1` and `L2` along the dimension `1`, the merging would be operated by connecting the output vertex `c=3` of `L1` to the input vertex `b=2` of `L2`. In this way, if we would like to start the renormalization procedure from, e.g., a `2x2` Lieb lattice (12 vertices), we can just double `L` once along both directions:
+```julia
+L = union(L,L,1)
+L = union(L,L,2)
+```
+We can then build a `NdSystem` from it by simply using `NdSystem(L, H, t, lHt, J)` or any other `NdSystem` constructor.
+
 ## Hamiltonian and dissipators
 
 Hamiltonian and dissipators can be built from a lattice and some input operators.
 ```julia
 hamiltonian(L, lH, t, lHt)
 ```
-Generate a Hamiltonian for a lattice from some local Hamiltonian `lH` and a local hopping operator `lHt` with associated tunnelling rate `t` as <img src="https://latex.codecogs.com/gif.latex?{\textstyle&space;\sum_i}\hat{\texttt{lH}}_i&space;&plus;&space;{\textstyle&space;\sum_{\langle&space;i;j\rangle}}&space;(t\times\hat{\texttt{lHt}}_i\otimes\hat{\texttt{lHt}}_j^\dagger&space;&plus;&space;\mathrm{H.c.})" title="{\textstyle \sum_i}\hat{\texttt{lH}}_i + {\textstyle \sum_{\langle i;j\rangle}} (t\times\hat{\texttt{lHt}}_i\otimes\hat{\texttt{lHt}}_j^\dagger + \mathrm{H.c.})" />.
+Generate a Hamiltonian for a lattice from some local Hamiltonian `lH` and a local hopping operator `lHt` with associated nearest-neighbors coupling rate `t` as <img src="https://latex.codecogs.com/gif.latex?{\textstyle&space;\sum_i}\hat{\texttt{lH}}_i&space;&plus;&space;{\textstyle&space;\sum_{\langle&space;i;j\rangle}}&space;(t\times\hat{\texttt{lHt}}_i\otimes\hat{\texttt{lHt}}_j^\dagger&space;&plus;&space;\mathrm{H.c.})" title="{\textstyle \sum_i}\hat{\texttt{lH}}_i + {\textstyle \sum_{\langle i;j\rangle}} (t\times\hat{\texttt{lHt}}_i\otimes\hat{\texttt{lHt}}_j^\dagger + \mathrm{H.c.})" />.
 ```julia
 hamiltonian(L, lH, (t1,t2, ... ,tN), lHt)
 ```
-Generate a Hamiltonian for a `NdLattice` in the same way but with anisotropic tunnelling rates.
+Generate a Hamiltonian for a `NdLattice` in the same way but with anisotropic nearest-neighbors coupling rates.
 ```julia
 dissipators(L, J)
 ```
@@ -71,31 +106,7 @@ NdSystem(L, H, (t1,t2, ... ,tN), lHt, J)
 NdSystem(L, H, t, J, lHt, obs)
 NdSystem(L, H, (t1,t2, ... ,tN), J, lHt, obs)
 ```
-Generate a system from a `NdLattice`, a Hamiltonian, either a single tunnelling rate `t` (isotropic system) or a tuple with as many rates as lattice dimensions (anisotropic system), and a local hopping operator `lHt` and a vector `J` of local jump operators. If passed, `obs` contains the observables to be transformed into the corner subspace along with the Liouvillian. Either a vector of `Dict` mapping some operator names (`String`) to some global operators or a vector of `Dict` mapping some operator names (`String`) to some local operators can be passed as argument.
-
-## More generic Lattices
-
-More generic lattices are accessible via the type `NdLattice{N}`. Its main constructor
-interface `NdLattice(shape; periodic=true/false)` builds by default an N-dimensional cubic lattice, however it is possible to define more generic unit cells by directly
-using the default constructor `NdLattice{N}(g, shape, Vint, Vext, pbc)`, where `N` is the number of dimensions, `g` is some arbitrary `LightGraphs.SimpleGraph` (unit cell), `shape` is the shape (`Tuple`) of the cubic lattice in which one wishes to embed the arbitrary unit cell,`Vint` is a tuple which i-th entry contains a vector of input vertices along the i-th dimension, `Vext` is a tuple which i-th entry contains a vector of output vertices along the i-th dimension and `pbc` is to be set to either `true` or `false` for either periodic or open boundary conditions. During the merging of two such lattices `L1` and `L2`, vertices belonging to `L1.Vext` are connected to `L2.Vint` (and reciprocally for `pbc=true`). The `shape` argument is used when `pbc=true`, for instance a one-dimensional periodic lattice `L=NdLattice((2,); periodic=true)` of size `2` (`L.shape[1] < 3`) has no supplementary edges with respect to its open boundary conditions counterpart (`NdLattice((2,); periodic=false)`) but once doubled `L2=union(L1,L1,1)` (`L2.shape[1] > 3`) a supplementary edge is added to complete the loop. This behaviour is taken care of similarly for generic lattices provided a proper shape was chosen at construction.
-
-For instance, a Lieb lattice can be built as a two-dimensional `NdLattice` starting from a 3-vertex path graph and specifying custom input and output vertices for each merging direction:
-```julia
-using LightGraphs
-
-g = PathGraph(3)
-L = NdLattice{2}(g, (2,2), ([2],[2]), ([3],[1]), true)
-```
-Here `g` is a L shaped unit cell with vertices `1` (North), `2` (center) and `3`
-(East). `(2, 2)` is a `2-Tuple` indicating that we embed this unit into a `2x2`
-unit cell. `([2],[2])` (resp. `([3],[1])`) declares the input (resp. output)
-vertices for the first and second dimension, i.e. if we append two such lattices
-`L1` and `L2` along the dimension `1`, the merging would be operated by connecting the output vertex `3` of `L1` to the input vertex `2` of `L2`. In this way, if we would like to start the renormalization procedure from, e.g., a `2x2` Lieb lattice (12 vertices), we can just double `L` once along both directions:
-```julia
-L = union(L,L,1)
-L = union(L,L,2)
-```
-We can then build a `ZnSystem` from it by simply using `NdSystem(L, H, t, lHt, J)` or any other `NdSystem` constructor.
+Generate a system from a `NdLattice`, a Hamiltonian, either a single nearest-neighbors coupling rate `t` (isotropic system) or a tuple with as many rates as lattice dimensions (anisotropic system), and a local hopping operator `lHt` and a vector `J` of local jump operators. If passed, `obs` contains the observables to be transformed into the corner subspace along with the Liouvillian. Either a vector of `Dict` mapping some operator names (`String`) to some global operators or a vector of `Dict` mapping some operator names (`String`) to some local operators can be passed as argument.
 
 ## Corner operations
 
@@ -120,7 +131,7 @@ Evaluates the steady state by solving iteratively the linear system <img src="ht
 ρ = CornerSpaceRenorm.steadystate_bicg_LtL(s, l; log=false, kwargs...)
 ρ, log = CornerSpaceRenorm.steadystate_bicg_LtL(s, l; log=true, kwargs...)
 ```
-Evaluates the steady state by solving iteratively the linear system <img src="https://latex.codecogs.com/gif.latex?\langle\mathcal{L},\mathcal{L}\hat{\rho}\rangle&space;&plus;&space;\langle\mathrm{Tr},\hat{\rho}\rangle&space;\mathrm{Tr}&space;=&space;\mathrm{Tr}" title="\langle\mathcal{L},\mathcal{L}\hat{\rho}\rangle + \langle\mathrm{Tr},\hat{\rho}\rangle \mathrm{Tr} = \mathrm{Tr}" /> via the stabilized biconjugate gradient method with `l` `GMRES` steps. No approximation of the Liovillian is made in order to enfore the trace one but in practice convergence is slower and poorer.
+Evaluates the steady state by solving iteratively the linear system <img src="https://latex.codecogs.com/gif.latex?\mathcal{L}^\dagger\mathcal{L}\vec{\rho}&plus;\vec{\mathrm{tr}}\otimes\vec{\mathrm{tr}}\cdot\vec{\rho}&space;=&space;\vec{\mathrm{tr}}" title="\mathcal{L}^\dagger\mathcal{L}\vec{\rho}+\vec{\mathrm{tr}}\otimes\vec{\mathrm{tr}}\cdot\vec{\rho} = \vec{\mathrm{tr}}" /> via the stabilized biconjugate gradient method with `l` `GMRES` steps. No approximation of the Liovillian is made in order to enfore the trace one but in practice convergence is slower and poorer.
 
 ## Plotting
 
@@ -383,4 +394,6 @@ In the last two steps, the entropy soared, a higher corner dimensions is thus to
 
 ## References
 
-<b id="f1">[1]</b> S. Finazzi, A. Le Boité, F. Storme, A. Baksic, and C. Ciuti, Corner-Space Renormalization Method for Driven-Dissipative Two-Dimensional Correlated Systems, [Phys. Rev. Lett. 115, 080604 (2015)](https://doi.org/10.1103/PhysRevLett.115.080604) [↩](#a1)
+<b id="f1">[1]</b> S. Finazzi, A. Le Boité, F. Storme, A. Baksic, and C. Ciuti, Corner-Space Renormalization Method for Driven-Dissipative Two-Dimensional Correlated Systems, [Phys. Rev. Lett. 115, 080604 (2015)](https://doi.org/10.1103/PhysRevLett.115.080604) (thereby results were obtained by the authors using a former independent MATLAB implementation)[↩](#a1)
+
+<b id="f2">[2]</b> W. Casteels, R. Rota, F. Storme, and C. Ciuti, Probing photon correlations in the dark sites of geometrically frustrated cavity lattices, [Phys. Rev. A. 93, 043833 (2016)](https://doi.org/10.1103/PhysRevA.93.043833)[↩](#a2)
