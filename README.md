@@ -1,4 +1,6 @@
-<a href="url"><img src="https://github.com/Z-Denis/CornerSpaceRenorm.jl/blob/logo/logo_name_arrows_compressed.png" align="center" height="165" width="750" ></a> 
+<p align="center">
+  <img src="https://github.com/Z-Denis/CornerSpaceRenorm.jl/blob/logo/logo_name_arrows_compressed.png" align="center" height="165" width="750" ></a> 
+</p>
 
 [![Build Status](https://travis-ci.com/Z-Denis/CornerSpaceRenorm.jl.svg?token=XuYcpCDomapYmd2vHj9y&branch=master)](https://travis-ci.com/Z-Denis/CornerSpaceRenorm.jl)
 [![codecov](https://codecov.io/gh/Z-Denis/CornerSpaceRenorm.jl/branch/master/graph/badge.svg?token=EwifsJO3ew)](https://codecov.io/gh/Z-Denis/CornerSpaceRenorm.jl)
