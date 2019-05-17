@@ -43,6 +43,14 @@ Construct a ![alt text](https://latex.codecogs.com/gif.latex?\mathbb{Z}^N) latti
 union(L1, L2, d)
 ```
 Merge two N-dimensional lattices along the dimension `d`.
+```julia
+pbc_from_obc(L)
+```
+Get a periodic copy of `L`.
+```julia
+obc_from_pbc(L)
+```
+Get an open copy of `L`.
 
 #### More generic lattices
 
@@ -78,6 +86,29 @@ L = union(L,L,1)
 L = union(L,L,2)
 ```
 We can then build a `NdSystem` from it by simply using `NdSystem(L, H, t, lHt, J)` or any other `NdSystem` constructor.
+
+For less trivial structures, it can be useful to first build a lattice from merging small unit cells up to some desired size and only then make the lattice periodic. For instance, a periodic honeycomb lattice could be made as follows:
+```julia
+using LightGraphs
+
+D = 2                # #dimensions
+a = 1; b = 2;        # vertex names
+shape = (1, 1)       # shape of the unit cell
+pbc = false          # Boundary conditions
+Vin_1  = [a]         # Input vertices in direction d=1
+Vout_1 = [b]         # Output vertices in direction d=1
+Vin_2  = [a]         # Input vertices in direction d=2
+Vout_2 = [b]         # Output vertices in direction d=2
+unit_cell = PathGraph(2)
+
+L = NdLattice{D}(unit_cell, shape, (Vin_1, Vin_2), (Vout_1, Vout_2), pbc)
+L = union(L,L,1)
+Lhex = union(L,L,2)           # One hexagon
+Lhex = union(Lhex,Lhex,1)     # Three hexagons
+Lhex = union(Lhex,Lhex,2)     # Nine hexagons
+
+Lhex_pbc = pbc_from_obc(Lhex) # Build a periodic copy of it
+```
 
 ## Hamiltonian and dissipators
 
@@ -137,10 +168,10 @@ Evaluates the steady state by solving iteratively the linear system <img src="ht
 
 Methods for `Lattice` and `AbstractSystem` are added to function `GraphPlot.gplot` of the package [GraphPlot.jl](https://github.com/JuliaGraphs/GraphPlot.jl).
 ```julia
-GraphPlot.gplot(L; kwargs...)
-GraphPlot.gplot(L, locs_x_in, locs_y_in; kwargs...)
-GraphPlot.gplot(s; kwargs...)
-GraphPlot.gplot(s, locs_x_in, locs_y_in; kwargs...)
+gplot(L; kwargs...)
+gplot(L, locs_x_in, locs_y_in; kwargs...)
+gplot(s; kwargs...)
+gplot(s, locs_x_in, locs_y_in; kwargs...)
 plot_system(s; kwargs...)
 plot_system(s, locs_x_in, locs_y_in; kwargs...)
 ```
