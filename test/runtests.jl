@@ -101,6 +101,23 @@ end
             end
             compare_lattices(L, NdLattice((8,); periodic=true))
 
+            # Test pbc_from_obc and obc_from_pbc
+            Lo = NdLattice((5,5);periodic=false)
+            Lp = NdLattice((5,5);periodic=true)
+            compare_lattices(pbc_from_obc(Lo), Lp)
+            compare_lattices(Lo, obc_from_pbc(Lp))
+
+            Lo = NdLattice((1,1);periodic=false)
+            Lo = union(Lo,Lo,1)
+            Lo = union(Lo,Lo,1)
+            Lo = union(Lo,Lo,1)
+            Lo = union(Lo,Lo,2)
+            Lo = union(Lo,Lo,2)
+            Lo = union(Lo,Lo,2)
+            Lp = NdLattice((8,8);periodic=true)
+            compare_lattices(pbc_from_obc(Lo), Lp)
+            compare_lattices(Lo, obc_from_pbc(Lp))
+
             # Dummy tests on plotting
             L = NdLattice((2,2);periodic=true)
             @test @no_error gplot(L)
