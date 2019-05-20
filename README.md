@@ -198,18 +198,18 @@ lobs = Dict("sigmax"=>sx,"sigmay"=>sy,"sigmaz"=>sz)
 
 # For simplicity we target an easy (low entropy) regime of parameters
 g = 1.          # Local energies
-gamma = 1. # Dissipation rate
+gamma = 1.      # Dissipation rate
 V = 2.          # tunneling rate
 
 # 1D lattice with periodic boundary conditions. Dimension is guessed from the
 # length of the shape tuple.
 L = NdLattice((8,); periodic=true)
-H = hamiltonian(L, g/2 * sx, V/4, sz)
+H = hamiltonian(L, g/2 * sx, V/4/2, sz)
 J = dissipators(L, [sqrt(2gamma) * sm])
 
 # Generate a system from a lattice, a Hamiltonian,
 # a local tunnelling operator and jump operators
-s = NdSystem(L, H, V/4., sz, J, lobs)
+s = NdSystem(L, H, V/4/2, sz, J, lobs)
 # Compute the steady state (by brute-force integration)
 ρ = steadystate.master(s)[2][end]
 # Merge two systems into some corner subspace spanned by 500 kets
