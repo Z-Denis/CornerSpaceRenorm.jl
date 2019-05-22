@@ -85,7 +85,7 @@ GraphPlot.gplot(L::Lattice; kwargs...) = GraphPlot.gplot(L.L; kwargs...)
 GraphPlot.gplot(L::Lattice, locs_x_in::Vector{R}, locs_y_in::Vector{R}; kwargs...) where R<:Real = GraphPlot.gplot(L.L, locs_x_in, locs_y_in; kwargs...)
 
 function rem_boundaries!(L::NdLattice{N}, d::Int) where N
-    if L.pbc == true && L.shape[d] > 2
+    if L.shape[d] > 2
         eb = [e for e in edges(L) if e.src ∈ L.Vint[d] && e.dst ∈ L.Vext[d]]
         for e in eb
             rem_edge!(L.L,e)
@@ -95,13 +95,12 @@ function rem_boundaries!(L::NdLattice{N}, d::Int) where N
 end
 
 function add_boundaries!(L::NdLattice{N}, d::Int) where N
-    if L.pbc == true
-        for i in 1:length(L.Vext[d])
-            add_edge!(L.L,Edge(L.Vext[d][i],L.Vint[d][i]))
-        end
+    for i in 1:length(L.Vext[d])
+        add_edge!(L.L,Edge(L.Vext[d][i],L.Vint[d][i]))
     end
     return L
 end
+
 """
     union(L1, L2, d)
 
@@ -111,12 +110,14 @@ function Base.union(L1::NdLattice{N},L2::NdLattice{N},d::Int) where N
     @assert d <= N "Merging direction should be smaller than that of the lattices."
     length(L1.Vext[d]) == length(L2.Vint[d]) || throw(DimensionMismatch("Lattices cannot be merged in this direction."))
     @assert L1.pbc == L2.pbc "Cannot merge a periodic and an open lattices together."
+    pbc = L1.pbc
     L1 = deepcopy(L1)
     L2 = deepcopy(L2)
     # Remove boundary edges along the merging dimension if periodic
-    rem_boundaries!(L1, d)
-    rem_boundaries!(L2, d)
-    pbc = L1.pbc
+    if pbc
+        rem_boundaries!(L1, d)
+        rem_boundaries!(L2, d)
+    end
 
     L = blockdiag(L1.L,L2.L)
     for i in 1:length(L1.Vext[d])
@@ -135,7 +136,42 @@ function Base.union(L1::NdLattice{N},L2::NdLattice{N},d::Int) where N
 
     lat = NdLattice{N}(L,Tuple(shape),Tuple(Vint),Tuple(Vext),pbc)
     # Add edges between boundaries if periodic
-    add_boundaries!(lat, d)
+    if pbc
+        add_boundaries!(lat, d)
+    end
+    return lat
+end
+
+"""
+    pbc_from_obc(L, d)
+
+Construct an `NdLattice{N}` with periodic boundary conditions from an
+`NdLattice{N}` `L` with open boundary conditions.
+"""
+function pbc_from_obc(Lobc::NdLattice{N}) where N
+    @assert !Lobc.pbc "The input lattice already has periodic boundary conditions."
+    Lpbc = NdLattice{N}(deepcopy(Lobc.L), deepcopy(Lobc.shape),
+                        deepcopy(Lobc.Vint), deepcopy(Lobc.Vext), true)
+    for d in 1:N
+        add_boundaries!(Lpbc, d)
+    end
+    return Lpbc
+end
+
+"""
+    obc_from_pbc(L, d)
+
+Construct an `NdLattice{N}` with open boundary conditions from an `NdLattice{N}`
+`L` with periodic boundary conditions.
+"""
+function obc_from_pbc(Lpbc::NdLattice{N}) where N
+    @assert Lpbc.pbc "The input lattice already has open boundary conditions."
+    Lobc = NdLattice{N}(deepcopy(Lpbc.L), deepcopy(Lpbc.shape),
+                        deepcopy(Lpbc.Vint), deepcopy(Lpbc.Vext), false)
+    for d in 1:N
+        rem_boundaries!(Lobc, d)
+    end
+    return Lobc
 end
 
 """

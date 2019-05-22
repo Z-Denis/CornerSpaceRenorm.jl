@@ -43,6 +43,14 @@ Construct a ![alt text](https://latex.codecogs.com/gif.latex?\mathbb{Z}^N) latti
 union(L1, L2, d)
 ```
 Merge two N-dimensional lattices along the dimension `d`.
+```julia
+pbc_from_obc(L)
+```
+Get a periodic copy of `L`.
+```julia
+obc_from_pbc(L)
+```
+Get an open copy of `L`.
 
 #### More generic lattices
 
@@ -78,6 +86,29 @@ L = union(L,L,1)
 L = union(L,L,2)
 ```
 We can then build a `NdSystem` from it by simply using `NdSystem(L, H, t, lHt, J)` or any other `NdSystem` constructor.
+
+For less trivial structures, it can be useful to first build a lattice from merging small unit cells up to some desired size and only then make the lattice periodic. For instance, a periodic honeycomb lattice could be made as follows:
+```julia
+using LightGraphs
+
+D = 2                # #dimensions
+a = 1; b = 2;        # vertex names
+shape = (1, 1)       # shape of the unit cell
+pbc = false          # Boundary conditions
+Vin_1  = [a]         # Input vertices in direction d=1
+Vout_1 = [b]         # Output vertices in direction d=1
+Vin_2  = [a]         # Input vertices in direction d=2
+Vout_2 = [b]         # Output vertices in direction d=2
+unit_cell = PathGraph(2)
+
+L = NdLattice{D}(unit_cell, shape, (Vin_1, Vin_2), (Vout_1, Vout_2), pbc)
+L = union(L,L,1)
+Lhex = union(L,L,2)           # One hexagon
+Lhex = union(Lhex,Lhex,1)     # Three hexagons
+Lhex = union(Lhex,Lhex,2)     # Nine hexagons
+
+Lhex_pbc = pbc_from_obc(Lhex) # Build a periodic copy of it
+```
 
 ## Hamiltonian and dissipators
 
@@ -137,10 +168,10 @@ Evaluates the steady state by solving iteratively the linear system <img src="ht
 
 Methods for `Lattice` and `AbstractSystem` are added to function `GraphPlot.gplot` of the package [GraphPlot.jl](https://github.com/JuliaGraphs/GraphPlot.jl).
 ```julia
-GraphPlot.gplot(L; kwargs...)
-GraphPlot.gplot(L, locs_x_in, locs_y_in; kwargs...)
-GraphPlot.gplot(s; kwargs...)
-GraphPlot.gplot(s, locs_x_in, locs_y_in; kwargs...)
+gplot(L; kwargs...)
+gplot(L, locs_x_in, locs_y_in; kwargs...)
+gplot(s; kwargs...)
+gplot(s, locs_x_in, locs_y_in; kwargs...)
 plot_system(s; kwargs...)
 plot_system(s, locs_x_in, locs_y_in; kwargs...)
 ```
@@ -166,19 +197,19 @@ sy = sigmay(b_spin)
 lobs = Dict("sigmax"=>sx,"sigmay"=>sy,"sigmaz"=>sz)
 
 # For simplicity we target an easy (low entropy) regime of parameters
-g = 1.          # Local energies
-gamma = 1. # Dissipation rate
-V = 2.          # tunneling rate
+γ = 1.   # Dissipation rate
+g = 0.5γ # Local energies
+V = 2γ   # Coupling rate
 
 # 1D lattice with periodic boundary conditions. Dimension is guessed from the
 # length of the shape tuple.
 L = NdLattice((8,); periodic=true)
-H = hamiltonian(L, g/2 * sx, V/4, sz)
-J = dissipators(L, [sqrt(2gamma) * sm])
+H = hamiltonian(L, g/2 * sx, V/4/2., sz)
+J = dissipators(L, [sqrt(γ) * sm])
 
 # Generate a system from a lattice, a Hamiltonian,
 # a local tunnelling operator and jump operators
-s = NdSystem(L, H, V/4., sz, J, lobs)
+s = NdSystem(L, H, V/4/2., sz, J, lobs)
 # Compute the steady state (by brute-force integration)
 ρ = steadystate.master(s)[2][end]
 # Merge two systems into some corner subspace spanned by 500 kets
@@ -198,19 +229,19 @@ println("Purity = ",real(tr(ρ2*ρ2)),"\n#states = ", real(exp(entropy_vn(ρ2)))
 println("<sx> = $σx_mean\n<sy> = $σy_mean\n<sz> = $σz_mean")
 ```
 ```julia-repl
-julia> Purity = 0.9741461232157818
-julia> #states = 1.1184964234832833
-julia> <sx> = 0.23599186171061198
-julia> <sy> = 0.062087577378825566
-julia> <sz> = -0.966768810606053
+julia> Purity = 0.9740074747395815
+julia> #states = 1.117951278975922
+julia> <sx> = 0.2361328965173251
+julia> <sy> = 0.060883828730663475
+julia> <sz> = -0.9668530523327893
 ```
 Increasing the corner dimension from `500` to `700` yields
 ```julia-repl
-julia> Purity = Purity = 0.9741118335231511
-julia> #states = 1.1185224207488438
-julia> <sx> = 0.2359865263666315
-julia> <sy> = 0.06208640000017497
-julia> <sz> = -0.9667527388195073
+julia> Purity = 0.9747381587498526
+julia> #states = 1.1149482217023885
+julia> <sx> = 0.2361340393642682
+julia> <sy> = 0.0623753386362691
+julia> <sz> = -0.9668528544553675
 ```
 The corner has reached convergence up to the chosen tolerance.
 
