@@ -157,6 +157,14 @@ Projection into the corner space spanned by the `M` most probable product states
 Evaluates the steady state by solving iteratively the linear system <img src="https://latex.codecogs.com/gif.latex?\mathcal{L}\hat{\rho}&space;=&space;0" title="\mathcal{L}\hat{\rho} = 0" /> via the stabilized biconjugate gradient method with `l` `GMRES` steps. The first line of the Liouvillian is overwritten to enforce a non-trivial trace one solution, this approximation yields an error of the order of the inverse of the square of the size of the Hilbert space.
 
 ```julia
+ρ = steadystate_bicg!(ρ0, H, J, l; log=false, kwargs...)
+ρ, log = steadystate_bicg!(ρ0, H, J, l; log=true, kwargs...)
+ρ = steadystate_bicg!(ρ0, s, l; log=false, kwargs...)
+ρ, log = steadystate_bicg!(ρ0, s, l; log=true, kwargs...)
+```
+Same as the above but starting the iterative process from the provided density matrix.
+
+```julia
 ρ = CornerSpaceRenorm.steadystate_bicg_LtL(H, J, l; log=false, kwargs...)
 ρ, log = CornerSpaceRenorm.steadystate_bicg_LtL(H, J, l; log=true, kwargs...)
 ρ = CornerSpaceRenorm.steadystate_bicg_LtL(s, l; log=false, kwargs...)
