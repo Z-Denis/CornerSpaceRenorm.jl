@@ -12,5 +12,5 @@ export hamiltonian, dissipators
 include("corner.jl")
 export corner_subspace, cornerize, vmerge, hmerge, hermitianize, hermitianize!
 include("steadystate.jl")
-export steadystate_bicg
+export steadystate_bicg, steadystate_bicg!
 end # module

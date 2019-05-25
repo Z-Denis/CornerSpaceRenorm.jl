@@ -479,6 +479,8 @@ end
         @test typeof(log) == ConvergenceHistory{true,Nothing}
         ρ4 = CornerSpaceRenorm.steadystate_bicg_LtL(s1)
         @test fidelity(ρ1, ρ4) ≈ 1. atol=1e-5
+        ρ5, log = steadystate_bicg!(ρ3, s1; log=true)
+        @test log.iters == 0
         ρ, log = steadystate_bicg(s1; log=true)
         @test typeof(log) == ConvergenceHistory{true,Nothing}
         ρ, log = CornerSpaceRenorm.steadystate_bicg_LtL(s1; log=true)
