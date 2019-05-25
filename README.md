@@ -157,6 +157,14 @@ Projection into the corner space spanned by the `M` most probable product states
 Evaluates the steady state by solving iteratively the linear system <img src="https://latex.codecogs.com/gif.latex?\mathcal{L}\hat{\rho}&space;=&space;0" title="\mathcal{L}\hat{\rho} = 0" /> via the stabilized biconjugate gradient method with `l` `GMRES` steps. The first line of the Liouvillian is overwritten to enforce a non-trivial trace one solution, this approximation yields an error of the order of the inverse of the square of the size of the Hilbert space.
 
 ```julia
+ρ = steadystate_bicg!(ρ0, H, J, l; log=false, kwargs...)
+ρ, log = steadystate_bicg!(ρ0, H, J, l; log=true, kwargs...)
+ρ = steadystate_bicg!(ρ0, s, l; log=false, kwargs...)
+ρ, log = steadystate_bicg!(ρ0, s, l; log=true, kwargs...)
+```
+Same as the above but starting the iterative process from the provided density matrix.
+
+```julia
 ρ = CornerSpaceRenorm.steadystate_bicg_LtL(H, J, l; log=false, kwargs...)
 ρ, log = CornerSpaceRenorm.steadystate_bicg_LtL(H, J, l; log=true, kwargs...)
 ρ = CornerSpaceRenorm.steadystate_bicg_LtL(s, l; log=false, kwargs...)
@@ -197,19 +205,20 @@ sy = sigmay(b_spin)
 lobs = Dict("sigmax"=>sx,"sigmay"=>sy,"sigmaz"=>sz)
 
 # For simplicity we target an easy (low entropy) regime of parameters
-g = 1.          # Local energies
-gamma = 1.      # Dissipation rate
-V = 2.          # tunneling rate
+γ = 1.   # Dissipation rate
+g = 0.5γ # Local energies
+V = 2γ   # Coupling rate
 
 # 1D lattice with periodic boundary conditions. Dimension is guessed from the
 # length of the shape tuple.
 L = NdLattice((8,); periodic=true)
-H = hamiltonian(L, g/2 * sx, V/4/2, sz)
-J = dissipators(L, [sqrt(2gamma) * sm])
+
+H = hamiltonian(L, g/2 * sx, V/4/2., sz)
+J = dissipators(L, [sqrt(γ) * sm])
 
 # Generate a system from a lattice, a Hamiltonian,
 # a local tunnelling operator and jump operators
-s = NdSystem(L, H, V/4/2, sz, J, lobs)
+s = NdSystem(L, H, V/4/2., sz, J, lobs)
 # Compute the steady state (by brute-force integration)
 ρ = steadystate.master(s)[2][end]
 # Merge two systems into some corner subspace spanned by 500 kets
@@ -229,19 +238,19 @@ println("Purity = ",real(tr(ρ2*ρ2)),"\n#states = ", real(exp(entropy_vn(ρ2)))
 println("<sx> = $σx_mean\n<sy> = $σy_mean\n<sz> = $σz_mean")
 ```
 ```julia-repl
-julia> Purity = 0.9741461232157818
-julia> #states = 1.1184964234832833
-julia> <sx> = 0.23599186171061198
-julia> <sy> = 0.062087577378825566
-julia> <sz> = -0.966768810606053
+julia> Purity = 0.9740074747395815
+julia> #states = 1.117951278975922
+julia> <sx> = 0.2361328965173251
+julia> <sy> = 0.060883828730663475
+julia> <sz> = -0.9668530523327893
 ```
 Increasing the corner dimension from `500` to `700` yields
 ```julia-repl
-julia> Purity = Purity = 0.9741118335231511
-julia> #states = 1.1185224207488438
-julia> <sx> = 0.2359865263666315
-julia> <sy> = 0.06208640000017497
-julia> <sz> = -0.9667527388195073
+julia> Purity = 0.9747381587498526
+julia> #states = 1.1149482217023885
+julia> <sx> = 0.2361340393642682
+julia> <sy> = 0.0623753386362691
+julia> <sz> = -0.9668528544553675
 ```
 The corner has reached convergence up to the chosen tolerance.
 
