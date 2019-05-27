@@ -143,8 +143,9 @@ Generate a system from a `NdLattice`, a Hamiltonian, either a single nearest-nei
 
 ```julia
 s1Us2 = merge(s1, s2, d, ρ1, ρ2, M)
+s1Us2, ρ1xρ2 = merge(s1, s2, d, ρ1, ρ2, M; return_dm=true)
 ```
-Projection into the corner space spanned by the `M` most probable product states of the merging of two N-dimensional systems along the direction `d`.
+Projection into the corner space spanned by the `M` most probable product states of the merging of two N-dimensional systems along the direction `d`. The product state in the corner basis is optionally returned.
 
 ## Steady state evaluation
 
