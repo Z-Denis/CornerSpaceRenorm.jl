@@ -426,6 +426,20 @@ end
                     @test maximum(abs2.(eigvals(ρ1.data) .- eigvals(ρ2.data))) ≈ 0. atol=1e-5
                 end
 
+                # Check returning the product density matrix when merging
+                L1 = NdLattice((2,))
+                H1 = hamiltonian(L1, g/2 * sx, V/4, sz)
+                J1 = dissipators(L1, [sqrt(2gamma) * sm])
+                s1 = NdSystem(L1, H1, (V/4,), sz, J1, lobs)
+                ρ1 = steadystate.master(s1.H,s1.J)[2][end]
+                s1, ρ02 = merge(s1,s1,1,ρ1,ρ1,16;return_dm=true)
+                @test tr(ρ02) ≈ 1.0 atol=1e-9
+                @test opnorm(ρ02.data .- ρ02.data) ≈ 0.0 atol=1e-9
+                @test all(eigvals(hermitianize(ρ02).data) .> 0.)
+                tss = steadystate.master(s1.H,s1.J;tol=1e-5)[1][end]
+                tss_init = steadystate.master(s1.H,s1.J;rho0=ρ02,tol=1e-5)[1][end]
+                @test tss_init < tss
+
                 # Merging different lattices
                 Ls = NdLattice((3,))
                 Hs = hamiltonian(Ls, g/2 * sx, V/4, sz)
