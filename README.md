@@ -28,7 +28,7 @@ This package provides functions for applying this merging procedure in a multith
 ## Installation
 From the Pkg REPL (prefix `]`), type:
 ```julia-repl
-(v1.1) pkg> add https://github.com/Z-Denis/CornerSpaceRenorm.jl
+(v1.1) pkg> add https://github.com/TheorieMPQ/CornerSpaceRenorm.jl
 ```
 
 ## Lattices
@@ -134,8 +134,8 @@ Corner merging and evolving functions take systems as arguments. Systems contain
 ```julia
 NdSystem(L, H, t, lHt, J)
 NdSystem(L, H, (t1,t2, ... ,tN), lHt, J)
-NdSystem(L, H, t, J, lHt, obs)
-NdSystem(L, H, (t1,t2, ... ,tN), J, lHt, obs)
+NdSystem(L, H, t, lHt, J, obs)
+NdSystem(L, H, (t1,t2, ... ,tN), lHt, J, obs)
 ```
 Generate a system from a `NdLattice`, a Hamiltonian, either a single nearest-neighbors coupling rate `t` (isotropic system) or a tuple with as many rates as lattice dimensions (anisotropic system), and a local hopping operator `lHt` and a vector `J` of local jump operators. If passed, `obs` contains the observables to be transformed into the corner subspace along with the Liouvillian. Either a vector of `Dict` mapping some operator names (`String`) to some global operators or a vector of `Dict` mapping some operator names (`String`) to some local operators can be passed as argument.
 
