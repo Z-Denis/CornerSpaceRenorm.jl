@@ -134,8 +134,8 @@ Corner merging and evolving functions take systems as arguments. Systems contain
 ```julia
 NdSystem(L, H, t, lHt, J)
 NdSystem(L, H, (t1,t2, ... ,tN), lHt, J)
-NdSystem(L, H, t, J, lHt, obs)
-NdSystem(L, H, (t1,t2, ... ,tN), J, lHt, obs)
+NdSystem(L, H, t, lHt, J, obs)
+NdSystem(L, H, (t1,t2, ... ,tN), lHt, J, obs)
 ```
 Generate a system from a `NdLattice`, a Hamiltonian, either a single nearest-neighbors coupling rate `t` (isotropic system) or a tuple with as many rates as lattice dimensions (anisotropic system), and a local hopping operator `lHt` and a vector `J` of local jump operators. If passed, `obs` contains the observables to be transformed into the corner subspace along with the Liouvillian. Either a vector of `Dict` mapping some operator names (`String`) to some global operators or a vector of `Dict` mapping some operator names (`String`) to some local operators can be passed as argument.
 
@@ -143,8 +143,9 @@ Generate a system from a `NdLattice`, a Hamiltonian, either a single nearest-nei
 
 ```julia
 s1Us2 = merge(s1, s2, d, ρ1, ρ2, M)
+s1Us2, ρ1xρ2 = merge(s1, s2, d, ρ1, ρ2, M; return_dm=true)
 ```
-Projection into the corner space spanned by the `M` most probable product states of the merging of two N-dimensional systems along the direction `d`.
+Projection into the corner space spanned by the `M` most probable product states of the merging of two N-dimensional systems along the direction `d`. The product state in the corner basis is optionally returned.
 
 ## Steady state evaluation
 

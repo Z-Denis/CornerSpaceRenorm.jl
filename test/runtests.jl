@@ -168,7 +168,7 @@ end
             # Number of tunnelling rates incompatible with number of dimensions
             @test_throws AssertionError NdSystem(L, H, (V/4,V/4), sz, J, lobs)
             # Incompatible operators
-            @test_throws MethodError NdSystem(L, H, (V/4,), destroy(FockBasis(1)), J, lobs)
+            @test_throws ErrorException NdSystem(L, H, (V/4,), destroy(FockBasis(1)), J, lobs)
 
             # Test constructor with missing observables
             s = NdSystem(L, H, (V/4,), sz, J)
@@ -198,6 +198,23 @@ end
             compare_systems(s1,s2)
             s1 = NdSystem(L, H, V/4, sz, J)
             s2 = NdSystem(L, H, Tuple([V/4 for i in 1:4]), sz, J)
+            compare_systems(s1,s2)
+
+            # Test new constructor
+            L = NdLattice((2,3); periodic=true)
+            H = hamiltonian(L, g/2 * sx, V/4/2., sz)
+            J = dissipators(L, [sqrt(gamma) * sm])
+            s1 = NdSystem(L, H, (V/4,V/4), (sz,sz), J, lobs)
+            s2 = NdSystem(L, H, V/4, sz, J, lobs)
+            compare_systems(s1,s2)
+            s3 = NdSystem(L, H, (V/4, V/4), sz, J, lobs)
+            compare_systems(s1,s3)
+            s4 = NdSystem(L, H, V/4, (sz,sz), J, lobs)
+            compare_systems(s1,s4)
+
+            # Test multiple coupling
+            @test @no_error s1 = NdSystem(L, H, V/4, ([sx,sz],[sx,sz]), J, lobs)
+            @test @no_error s2 = NdSystem(L, H, (V/4,V/4), ([sx,sz],[sx,sz]), J, lobs)
             compare_systems(s1,s2)
 
             # Test construction and merging
@@ -257,20 +274,22 @@ end
 
             # Dummy tests on plotting
             L = NdLattice((4,))
+            H = hamiltonian(L, g/2 * sx, V/4, sz)
+            J = dissipators(L, [sqrt(2gamma) * sm])
             s = NdSystem(L, H, (V/4,), sz, J)
-            @test @no_error gplot(s)
-            @test @no_error gplot(s, Float64.(collect(1:nv(L))), Float64.(collect(1:nv(L))))
-            @test @no_error plot_system(s)
-            @test @no_error plot_system(s, Float64.(collect(1:nv(L))), Float64.(collect(1:nv(L))))
-            x = gplot(s)
-            y = gplot(L.L)
+            @test @no_error gplot(s);
+            @test @no_error gplot(s, Float64.(collect(1:nv(L))), Float64.(collect(1:nv(L))));
+            @test @no_error plot_system(s);
+            @test @no_error plot_system(s, Float64.(collect(1:nv(L))), Float64.(collect(1:nv(L))));
+            x = gplot(s);
+            y = gplot(L.L);
             @test typeof(x) == typeof(y)
-            x = plot_system(s)
+            x = plot_system(s);
             @test typeof(x) == typeof(y)
-            x = gplot(s, Float64.(collect(1:nv(L))), Float64.(collect(1:nv(L))))
-            y = gplot(L.L, Float64.(collect(1:nv(L))), Float64.(collect(1:nv(L))))
+            x = gplot(s, Float64.(collect(1:nv(L))), Float64.(collect(1:nv(L))));
+            y = gplot(L.L, Float64.(collect(1:nv(L))), Float64.(collect(1:nv(L))));
             @test all([typeof(getfield(x,f)) == typeof(getfield(y,f)) for f in fieldnames(typeof(x))])
-            x = plot_system(s, Float64.(collect(1:nv(L))), Float64.(collect(1:nv(L))))
+            x = plot_system(s, Float64.(collect(1:nv(L))), Float64.(collect(1:nv(L))));
             @test all([typeof(getfield(x,f)) == typeof(getfield(y,f)) for f in fieldnames(typeof(x))])
         end;
 
@@ -425,6 +444,20 @@ end
                     @test maximum([maximum(abs2.(eigvals(Matrix(s1.J[i].data's1.J[i].data)) .- eigvals(Matrix(s2.J[i].data's2.J[i].data)))) for i in 1:length(s1.J)]) ≈ 0. atol=eps(Float64)
                     @test maximum(abs2.(eigvals(ρ1.data) .- eigvals(ρ2.data))) ≈ 0. atol=1e-5
                 end
+
+                # Check returning the product density matrix when merging
+                L1 = NdLattice((2,))
+                H1 = hamiltonian(L1, g/2 * sx, V/4, sz)
+                J1 = dissipators(L1, [sqrt(2gamma) * sm])
+                s1 = NdSystem(L1, H1, (V/4,), sz, J1, lobs)
+                ρ1 = steadystate.master(s1.H,s1.J)[2][end]
+                s1, ρ02 = merge(s1,s1,1,ρ1,ρ1,16;return_dm=true)
+                @test tr(ρ02) ≈ 1.0 atol=1e-9
+                @test opnorm(ρ02.data .- ρ02.data) ≈ 0.0 atol=1e-9
+                @test all(eigvals(hermitianize(ρ02).data) .> 0.)
+                tss = steadystate.master(s1.H,s1.J;tol=1e-5)[1][end]
+                tss_init = steadystate.master(s1.H,s1.J;rho0=ρ02,tol=1e-5)[1][end]
+                @test tss_init < tss
 
                 # Merging different lattices
                 Ls = NdLattice((3,))

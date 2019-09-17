@@ -199,8 +199,11 @@ Merge two `NdSystem`s along the `d`-th direction with corner compression.
 * `ρ2`: state of the system `s2`.
 * `M`: corner dimension.
 """
-function Base.merge(s1::NdSystem{N},s2::NdSystem{N},d::Integer,ρ1::DenseOperator{B1,B1},ρ2::DenseOperator{B2,B2},M::Int) where {N,B1<:Basis,B2<:Basis}
+function Base.merge(s1::NdSystem{N},s2::NdSystem{N},d::Integer,
+                    ρ1::DenseOperator{B1,B1},ρ2::DenseOperator{B2,B2},M::Int;
+                    return_dm=false) where {N,B1<:Basis,B2<:Basis}
     # TO DO: tests
+    @assert 0 < M <= length(s1.gbasis)*length(s2.gbasis) "The corner dimension must not exceed that of the total Hilbert space."
     length(s1.lattice.Vext[d]) == length(s2.lattice.Vint[d]) || throw(DimensionMismatch("Lattices cannot be merged in this direction."))
     @assert s1.lattice.pbc == s2.lattice.pbc "Cannot merge systems with periodic and open open boundary conditions."
     lattice = union(s1.lattice,s2.lattice,d)
@@ -327,5 +330,9 @@ function Base.merge(s1::NdSystem{N},s2::NdSystem{N},d::Integer,ρ1::DenseOperato
         end
     end
 
-    return NdSystem{N,typeof(lattice),typeof(gbasis),typeof(H),eltype(first(Htint)),eltype(J),typeof(H)}(lattice,gbasis,H,s1.trate,Tuple(Htint),Tuple(Htext),J,obs)
+    if return_dm
+        return NdSystem{N,typeof(lattice),typeof(gbasis),typeof(H),eltype(first(Htint)),eltype(J),typeof(H)}(lattice,gbasis,H,s1.trate,Tuple(Htint),Tuple(Htext),J,obs), normalize(𝒫(ρ1, ρ2))
+    else
+        return NdSystem{N,typeof(lattice),typeof(gbasis),typeof(H),eltype(first(Htint)),eltype(J),typeof(H)}(lattice,gbasis,H,s1.trate,Tuple(Htint),Tuple(Htext),J,obs)
+    end
 end

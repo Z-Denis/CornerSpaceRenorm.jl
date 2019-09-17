@@ -35,9 +35,9 @@ Construct an `N`-dimensional cubic lattice of type `NdLattice{N}`.
 function NdLattice(shape::Tuple{Vararg{Int,N}};periodic::Bool = false) where N
     @assert N > 0 "The lattice must be positive-dimensional."
     if N == 1
-        return NdLattice{1}(Grid(collect(shape);periodic=periodic),shape,([1],),([shape[end]],),periodic)
+        return NdLattice{1}(grid(collect(shape);periodic=periodic),shape,([1],),([shape[end]],),periodic)
     else
-        L = Grid(collect(shape);periodic=periodic);
+        L = grid(collect(shape);periodic=periodic);
         lids = LinearIndices(shape)
         symbids = [1;fill(:(:), N-1)]
         Vint = Tuple([Core.eval(CornerSpaceRenorm,Expr(:ref, :($lids), circshift(symbids,d)...))[:] for d in 0:N-1])
@@ -217,57 +217,59 @@ Liouvillian. Can be a `Dict{String,<local operator type>}` of local operators or
 an array of `nv(lat)` `Dict{String,<global operator type>}`s of operators in the
 global basis.
 """
-function NdSystem(lat::NdLattice{M},H::O1,trate::Tuple{Vararg{Number,Q}},lHt::O2,J::Vector{O3},obs::Union{Vector{Dict{String,O4}},Missing}=missing) where {M,N,Q,LB<:Basis,
+function NdSystem(lat::NdLattice{M},H::O1,trate,lHt,J::Vector{O3},obs=missing) where {M,M1,M2,N,T<:Number,LB<:Basis,
                                                        B<:CompositeBasis{Tuple{Vararg{LB,N}}},
                                                        O1<:AbstractOperator{B,B},
-                                                       O2<:AbstractOperator{LB,LB},
-                                                       O3<:AbstractOperator{B,B},
-                                                       O4<:AbstractOperator{B,B}}
+                                                       O3<:AbstractOperator{B,B}}
     gbasis = H.basis_l;
     @assert nv(lat) == length(gbasis.bases)
-    @assert Q == M "Number of tunnelling rates must match number of dimensions"
-    @assert lHt.basis_l == first(gbasis.bases) "Global basis of H must match the local basis of lHt"
     @assert H.basis_r == H.basis_l == gbasis
     @assert first(J).basis_l == first(J).basis_r == gbasis
-    _trate::Tuple{Vararg{ComplexF64,M}} = Tuple(ComplexF64.(collect(trate)))
-    Htint = Tuple([[embed(gbasis,v,lHt) for v in lat.Vint[d]] for d in 1:M])
-    Htext = Tuple([[embed(gbasis,v,lHt) for v in lat.Vext[d]] for d in 1:M])
 
-    if ismissing(obs)
-        return NdSystem{M,NdLattice{M},B,O1,eltype(first(Htint)),O3,typeof(H)}(lat,gbasis,H,_trate,Htint,Htext,J,[Dict{String,typeof(H)}() for i in 1:nv(lat)])
-    else
-        return NdSystem{M,NdLattice{M},B,O1,eltype(first(Htint)),O3,O4}(lat,gbasis,H,_trate,Htint,Htext,J,obs)
+    _trate = begin
+        if typeof(trate) <: Number
+            Tuple(fill(ComplexF64(trate), M))
+        elseif typeof(trate)<:Tuple && eltype(trate)<:Number
+            @assert length(trate) == M "Number of coupling rates must match number of dimensions"
+            ComplexF64.(trate)
+        else
+            error("The coupling rate must either be a Number or a Tuple")
+        end
     end
-end
 
-function NdSystem(lat::NdLattice{M},H::O1,trate::Number,lHt::O2,J::Vector{O3},obs::Union{Vector{Dict{String,O4}},Missing}=missing) where {M,N,LB<:Basis,
-                                                       B<:CompositeBasis{Tuple{Vararg{LB,N}}},
-                                                       O1<:AbstractOperator{B,B},
-                                                       O2<:AbstractOperator{LB,LB},
-                                                       O3<:AbstractOperator{B,B},
-                                                       O4<:AbstractOperator{B,B}}
-    return NdSystem(lat,H,Tuple([trate for i in 1:M]),lHt,J,obs)
-end
+    Htint, Htext = begin
+        if typeof(lHt) <: AbstractOperator{LB,LB}
+            Tuple([embed(gbasis,v,lHt) for v in lat.Vint[d]] for d in 1:M), Tuple([embed(gbasis,v,lHt) for v in lat.Vext[d]] for d in 1:M)
+        elseif typeof(lHt)<:Tuple
+            @assert length(lHt) == M "Number of coupling operators must match number of dimensions"
+            if eltype(lHt)<:AbstractOperator{LB,LB}
+                Tuple([embed(gbasis,v,lHt[d]) for v in lat.Vint[d]] for d in 1:M), Tuple([embed(gbasis,v,lHt[d]) for v in lat.Vext[d]] for d in 1:M)
+            elseif eltype(lHt)<:Vector{O} where {O<:AbstractOperator{LB,LB}}
+                Tuple([embed(gbasis,v,h) for h in lHt[d], v in lat.Vint[d]][:] for d in 1:M), Tuple([embed(gbasis,v,h) for h in lHt[d], v in lat.Vext[d]][:] for d in 1:M)
+            else
+                error("The tuple of coupling operators must contain either local operators or a vector or local operators")
+            end
+        else
+            error("The coupling operator must be a local operator, a tuple of local operators or a tuple of vectors of local operators")
+        end
+    end
 
-function NdSystem(lat::NdLattice{M},H::O1,trate::Tuple{Vararg{Number,Q}},lHt::O2,J::Vector{O3},lobs::Dict{String,O4}) where {M,N,Q,LB<:Basis,
-                                                       B<:CompositeBasis{Tuple{Vararg{LB,N}}},
-                                                       O1<:AbstractOperator{B,B},
-                                                       O2<:AbstractOperator{LB,LB},
-                                                       O3<:AbstractOperator{B,B},
-                                                       O4<:AbstractOperator{LB,LB}}
-    gbasis = H.basis_l;
-    @assert Q == M "Number of rates must match number of dimensions."
-    obs = [Dict([name => embed(gbasis,i,lop) for (name,lop) in lobs]) for i in 1:nv(lat)]
-    return NdSystem(lat,H,Tuple(ComplexF64.(collect(trate))),lHt,J,obs)
-end
+    _obs = begin
+        if ismissing(obs)
+             [Dict{String,typeof(H)}() for i in 1:nv(lat)]
+         elseif typeof(obs) <: Vector{Dict{String,O}} where {O<:AbstractOperator{B,B}}
+             obs
+         elseif typeof(obs) <: Dict{String,O} where {O<:AbstractOperator{LB,LB}}
+             [Dict(name => embed(gbasis,i,lop) for (name,lop) in obs) for i in 1:nv(lat)]
+         elseif typeof(obs) <: Dict{String,O} where {O<:AbstractOperator{B,B}}
+             [obs]
+         else
+             error("If defined, argument obs takes either a Dict{String,O} of local operators or a vector of Dict{String,O} of global operators")
+         end
+    end
+    O4 = eltype(_obs).parameters[2]
 
-function NdSystem(lat::NdLattice{M},H::O1,trate::Number,lHt::O2,J::Vector{O3},lobs::Dict{String,O4}) where {M,N,LB<:Basis,
-                                                       B<:CompositeBasis{Tuple{Vararg{LB,N}}},
-                                                       O1<:AbstractOperator{B,B},
-                                                       O2<:AbstractOperator{LB,LB},
-                                                       O3<:AbstractOperator{B,B},
-                                                       O4<:AbstractOperator{LB,LB}}
-    return NdSystem(lat,H,Tuple([trate for i in 1:M]),lHt,J,lobs)
+    return NdSystem{M,NdLattice{M},B,O1,eltype(first(Htint)),O3,O4}(lat,gbasis,H,_trate,Htint,Htext,J,_obs)
 end
 
 function Base.show(io::IO, s::NdSystem)
