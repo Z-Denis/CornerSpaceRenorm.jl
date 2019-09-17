@@ -30,9 +30,9 @@ function hamiltonian(L::Lattice, lH::O1, lHt::Tuple{Number,O2}) where {B<:Basis,
     return H;
 end
 
-function hamiltonian(L::Lattice, lH::O1, trate::Number, lHt::O2) where {N,Q,B<:Basis,O1<:AbstractOperator{B,B},O2<:AbstractOperator{B,B}}
-    hamiltonian(L, lH, (trate, lHt))
-end
+#function hamiltonian(L::Lattice, lH::O1, trate::Number, lHt::O2) where {N,Q,B<:Basis,O1<:AbstractOperator{B,B},O2<:AbstractOperator{B,B}}
+#    hamiltonian(L, lH, (trate, lHt))
+#end
 
 """
     hamiltonian(L, lH, trate, lHt)
@@ -78,6 +78,71 @@ function hamiltonian(L::NdLattice{N}, lH::O1, trate::Tuple{Vararg{Number,Q}}, lH
     end
 
     return H;
+end
+
+function hamiltonian(L::NdLattice{N}, lH::O1, trate, lHt) where {N,B<:Basis,O1<:AbstractOperator{B,B}}
+    gbasis = CompositeBasis([lH.basis_l for i in 1:nv(L)]...);
+
+    _trate = begin
+        if typeof(trate) <: Number
+            Tuple(fill(ComplexF64(trate), N))
+        elseif typeof(trate)<:Tuple && eltype(trate)<:Number
+            @assert length(trate) == N "Number of coupling rates must match number of dimensions"
+            ComplexF64.(trate)
+        else
+            error("The coupling rate must either be a Number or a Tuple")
+        end
+    end
+
+    _lHt = begin
+        if typeof(lHt) <: AbstractOperator{B,B}
+            Tuple([lHt] for d in 1:N)
+        elseif typeof(lHt)<:Tuple
+            @assert length(lHt) == N "Number of coupling operators must match number of dimensions"
+            if eltype(lHt)<:AbstractOperator{B,B}
+                Tuple([lHt[d]] for d in 1:N)
+            elseif eltype(lHt)<:Vector{O} where {O<:AbstractOperator{B,B}}
+                Tuple([h for h in lHt[d]] for d in 1:N)
+            else
+                error("The tuple of coupling operators must contain either local operators or a vector or local operators")
+            end
+        else
+            error("The coupling operator must be a local operator, a tuple of local operators or a tuple of vectors of local operators")
+        end
+    end
+
+    H = begin
+            if typeof(lH) <: SparseOperator && typeof(first(first(_lHt))) <: SparseOperator
+                SparseOperator(gbasis);
+            else
+                DenseOperator(gbasis);
+            end
+        end
+
+    lids = LinearIndices(L.shape)
+    function lattice_slice(d::Int,i::Int)
+        symbids = [mod1(i,L.shape[d]);fill(:(:), N-1)]
+        Core.eval(CornerSpaceRenorm,Expr(:ref, :($lids), circshift(symbids,d-1)...))[:]
+    end
+    # E[d]: set of edges along the d-th dimension
+    E = [Vector{LightGraphs.SimpleGraphs.SimpleEdge{Int64}}(undef,0) for i in 1:N]
+    for d in 1:N
+        i_max = L.pbc && (L.shape[d] > 2) ? L.shape[d] : L.shape[d]-1
+        E[d] = vcat([[Edge(e) for e in zip(lattice_slice(d,i),lattice_slice(d,i+1))] for i in 1:i_max]...)
+    end
+
+    for d in 1:N
+        for e in E[d], h in _lHt[d]
+            H.data .+= trate[d] * embed(gbasis,[e.src, e.dst],[h, dagger(h)]).data;
+        end
+    end
+    H.data .= H.data + H.data';
+
+    for v in vertices(L)
+        H.data .+= embed(gbasis, v, lH).data;
+    end
+
+    return H
 end
 
 """
