@@ -203,7 +203,7 @@ end
             # Test new constructor
             L = NdLattice((2,3); periodic=true)
             H = hamiltonian(L, g/2 * sx, V/4/2., sz)
-            J = dissipators(L, [sqrt(γ) * sm])
+            J = dissipators(L, [sqrt(gamma) * sm])
             s1 = NdSystem(L, H, (V/4,V/4), (sz,sz), J, lobs)
             s2 = NdSystem(L, H, V/4, sz, J, lobs)
             compare_systems(s1,s2)
