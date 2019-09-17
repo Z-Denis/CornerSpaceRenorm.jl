@@ -35,9 +35,9 @@ Construct an `N`-dimensional cubic lattice of type `NdLattice{N}`.
 function NdLattice(shape::Tuple{Vararg{Int,N}};periodic::Bool = false) where N
     @assert N > 0 "The lattice must be positive-dimensional."
     if N == 1
-        return NdLattice{1}(Grid(collect(shape);periodic=periodic),shape,([1],),([shape[end]],),periodic)
+        return NdLattice{1}(grid(collect(shape);periodic=periodic),shape,([1],),([shape[end]],),periodic)
     else
-        L = Grid(collect(shape);periodic=periodic);
+        L = grid(collect(shape);periodic=periodic);
         lids = LinearIndices(shape)
         symbids = [1;fill(:(:), N-1)]
         Vint = Tuple([Core.eval(CornerSpaceRenorm,Expr(:ref, :($lids), circshift(symbids,d)...))[:] for d in 0:N-1])
