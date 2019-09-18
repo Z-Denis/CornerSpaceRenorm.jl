@@ -131,10 +131,8 @@ function hamiltonian(L::NdLattice{N}, lH::O1, trate, lHt) where {N,B<:Basis,O1<:
         E[d] = vcat([[Edge(e) for e in zip(lattice_slice(d,i),lattice_slice(d,i+1))] for i in 1:i_max]...)
     end
 
-    for d in 1:N
-        for e in E[d], h in _lHt[d]
-            H.data .+= trate[d] * embed(gbasis,[e.src, e.dst],[h, dagger(h)]).data;
-        end
+    for d in 1:N,  e in E[d], h in _lHt[d]
+        H.data .+= _trate[d] * embed(gbasis,[e.src, e.dst],[h, dagger(h)]).data;
     end
     H.data .= H.data + H.data';
 
