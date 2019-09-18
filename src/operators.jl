@@ -122,7 +122,7 @@ function hamiltonian(L::NdLattice{N}, lH::O1, trate, lHt) where {N,B<:Basis,O1<:
     lids = LinearIndices(L.shape)
     function lattice_slice(d::Int,i::Int)
         symbids = [mod1(i,L.shape[d]);fill(:(:), N-1)]
-        Core.eval(CornerSpaceRenorm,Expr(:ref, :($lids), circshift(symbids,d-1)...))[:]
+        collect(Core.eval(CornerSpaceRenorm,Expr(:ref, :($lids), circshift(symbids,d-1)...)))[:]
     end
     # E[d]: set of edges along the d-th dimension
     E = [Vector{LightGraphs.SimpleGraphs.SimpleEdge{Int64}}(undef,0) for i in 1:N]
