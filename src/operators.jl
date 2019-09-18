@@ -97,6 +97,8 @@ function hamiltonian(L::NdLattice{N}, lH::O1, trate, lHt) where {N,B<:Basis,O1<:
     _lHt = begin
         if typeof(lHt) <: AbstractOperator{B,B}
             Tuple([lHt] for d in 1:N)
+        elseif typeof(lHt) <: Vector{O} where {O<:AbstractOperator{B,B}}
+            Tuple(deepcopy(lHt) for d in 1:N)
         elseif typeof(lHt)<:Tuple
             @assert length(lHt) == N "Number of coupling operators must match number of dimensions"
             if eltype(lHt)<:AbstractOperator{B,B}
