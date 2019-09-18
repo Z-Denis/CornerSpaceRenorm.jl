@@ -118,9 +118,18 @@ hamiltonian(L, lH, t, lHt)
 ```
 Generate a Hamiltonian for a lattice from some local Hamiltonian `lH` and a local hopping operator `lHt` with associated nearest-neighbors coupling rate `t` as <img src="https://latex.codecogs.com/gif.latex?{\textstyle&space;\sum_i}\hat{\texttt{lH}}_i&space;&plus;&space;{\textstyle&space;\sum_{\langle&space;i;j\rangle}}&space;(t\times\hat{\texttt{lHt}}_i\otimes\hat{\texttt{lHt}}_j^\dagger&space;&plus;&space;\mathrm{H.c.})" title="{\textstyle \sum_i}\hat{\texttt{lH}}_i + {\textstyle \sum_{\langle i;j\rangle}} (t\times\hat{\texttt{lHt}}_i\otimes\hat{\texttt{lHt}}_j^\dagger + \mathrm{H.c.})" />.
 ```julia
+hamiltonian(L, lH, t, [lHt1, lHt2, ... ,lHtN])
+```
+Same as the above but with multiple coupling terms between sites (e.g. quantum XY model).
+```julia
 hamiltonian(L, lH, (t1,t2, ... ,tN), lHt)
 ```
 Generate a Hamiltonian for a `NdLattice` in the same way but with anisotropic nearest-neighbors coupling rates.
+```julia
+hamiltonian(L, lH, (t1,t2, ... ,tN), (lHt1, lHt2, ... ,lHtN)
+hamiltonian(L, lH, (t1,t2, ... ,tN), ([lHt11, ... ,lHt1N], ..., [lHtN1, ... ,lHtNN])
+```
+Generate a Hamiltonian for a `NdLattice` in the same way but with anisotropic nearest-neighbors coupling rates and different (eventually multiple) coupling operators in each dimension.
 ```julia
 dissipators(L, J)
 ```
@@ -136,8 +145,12 @@ NdSystem(L, H, t, lHt, J)
 NdSystem(L, H, (t1,t2, ... ,tN), lHt, J)
 NdSystem(L, H, t, lHt, J, obs)
 NdSystem(L, H, (t1,t2, ... ,tN), lHt, J, obs)
+NdSystem(L, H, (t1,t2, ... ,tN), (lHt1, ..., lHtN), J)
+NdSystem(L, H, (t1,t2, ... ,tN), (lHt1, ..., lHtN), J, obs)
+NdSystem(L, H, (t1,t2, ... ,tN), ([lHt11, ..., lHt1N], ..., [lHtN1, ..., lHtNN]), J)
+NdSystem(L, H, (t1,t2, ... ,tN), ([lHt11, ..., lHt1N], ..., [lHtN1, ..., lHtNN]), J, obs)
 ```
-Generate a system from a `NdLattice`, a Hamiltonian, either a single nearest-neighbors coupling rate `t` (isotropic system) or a tuple with as many rates as lattice dimensions (anisotropic system), and a local hopping operator `lHt` and a vector `J` of local jump operators. If passed, `obs` contains the observables to be transformed into the corner subspace along with the Liouvillian. Either a vector of `Dict` mapping some operator names (`String`) to some global operators or a vector of `Dict` mapping some operator names (`String`) to some local operators can be passed as argument.
+Generate a system from a `NdLattice`, a Hamiltonian, either a single nearest-neighbors coupling rate `t` (isotropic system) or a tuple with as many rates as lattice dimensions (anisotropic system), and a local hopping operator `lHt` (rules for defining coupling operators follow those of the Hamiltonian constructors) and a vector `J` of local jump operators. If passed, `obs` contains the observables to be transformed into the corner subspace along with the Liouvillian. Either a vector of `Dict` mapping some operator names (`String`) to some global operators or a vector of `Dict` mapping some operator names (`String`) to some local operators can be passed as argument.
 
 ## Corner operations
 
