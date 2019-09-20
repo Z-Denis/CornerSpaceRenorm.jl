@@ -411,13 +411,13 @@ end
                     s1 = NdSystem(L1, H1, (V/4,), sz, J1, lobs)
                     ρ1 = steadystate.master(s1.H,s1.J)[2][end]
                     s1 = merge(s1,s1,1,ρ1,ρ1,16)
-                    ρ1 = steadystate.master(s1.H,s1.J;tol=1e-5)[2][end]
+                    ρ1 = steadystate.master(s1.H,s1.J;tol=1e-6)[2][end]
 
                     L2 = NdLattice((4,); periodic=pbc)
                     H2 = hamiltonian(L2, g/2 * sx, V/4, sz)
                     J2 = dissipators(L2, [sqrt(2gamma) * sm])
                     s2 = NdSystem(L2, H2, (V/4,), sz, J2, lobs)
-                    ρ2 = steadystate.master(s2.H,s2.J;tol=1e-5)[2][end]
+                    ρ2 = steadystate.master(s2.H,s2.J;tol=1e-6)[2][end]
 
                     @test maximum(abs2.(eigvals(Matrix(s1.H.data)) .- eigvals(Matrix(s2.H.data)))) ≈ 0. atol=eps(Float64)
                     @test maximum([maximum(abs2.(eigvals(Matrix(s1.J[i].data's1.J[i].data)) .- eigvals(Matrix(s2.J[i].data's2.J[i].data)))) for i in 1:length(s1.J)]) ≈ 0. atol=eps(Float64)
