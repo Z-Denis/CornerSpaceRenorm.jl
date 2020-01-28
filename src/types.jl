@@ -217,8 +217,8 @@ Liouvillian. Can be a `Dict{String,<local operator type>}` of local operators or
 an array of `nv(lat)` `Dict{String,<global operator type>}`s of operators in the
 global basis.
 """
-function NdSystem(lat::NdLattice{M},H::O1,trate,lHt,J::Vector{O3},obs=missing) where {M,M1,M2,N,T<:Number,LB<:Basis,
-                                                       B<:CompositeBasis{Tuple{Vararg{LB,N}}},
+function NdSystem(lat::NdLattice{M},H::O1,trate,lHt,J::Vector{O3},obs=missing) where {M,M1,M2,N,S,T<:Number,LB<:Basis,
+                                                       B<:CompositeBasis{S,Tuple{Vararg{LB,N}}},
                                                        O1<:AbstractOperator{B,B},
                                                        O3<:AbstractOperator{B,B}}
     gbasis = H.basis_l;
