@@ -11,7 +11,7 @@ according to Σ<i,j> (t * Op[i] ⊗ Op[j]' + t' * Op[j] ⊗ Op[i]')
 function hamiltonian(L::Lattice, lH::O1, lHt::Tuple{Number,O2}) where {B<:Basis,O1<:AbstractOperator{B,B},O2<:AbstractOperator{B,B}}
     gbasis = CompositeBasis([lH.basis_l for i in 1:nv(L)]...);
     H = begin
-            if typeof(lH) <: SparseOperator && typeof(lHt[2]) <: SparseOperator
+            if !isdense(lH) && !isdense(lHt[2])
                 SparseOperator(gbasis);
             else
                 DenseOperator(gbasis);
@@ -48,7 +48,7 @@ function hamiltonian(L::NdLattice{N}, lH::O1, trate::Tuple{Vararg{Number,Q}}, lH
     @assert Q == N "Number of tunnelling rates must match number of dimensions"
     gbasis = CompositeBasis([lH.basis_l for i in 1:nv(L)]...);
     H = begin
-            if typeof(lH) <: SparseOperator && typeof(lHt) <: SparseOperator
+            if !isdense(lH) && !isdense(lHt)
                 SparseOperator(gbasis);
             else
                 DenseOperator(gbasis);
@@ -114,7 +114,7 @@ function hamiltonian(L::NdLattice{N}, lH::O1, trate, lHt) where {N,B<:Basis,O1<:
     end
 
     H = begin
-            if typeof(lH) <: SparseOperator && typeof(first(first(_lHt))) <: SparseOperator
+            if !isdense(lH) && !isdense(first(first(_lHt)))
                 SparseOperator(gbasis);
             else
                 DenseOperator(gbasis);
@@ -157,3 +157,6 @@ function dissipators(L::Lattice, J::Vector{O}) where {B<:Basis,O<:AbstractOperat
     gbasis = CompositeBasis([first(J).basis_l for i in 1:nv(L)]...);
     return vcat([[embed(gbasis, v, J[i]) for i in 1:length(J)] for v in vertices(L)]...)
 end
+
+isdense(op::DataOperator) = typeof(op.data) <: DenseMatrix
+isdense(op::AbstractOperator) = false
