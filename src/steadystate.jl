@@ -17,7 +17,9 @@ the square of the size of the Hilbert space.
 
 See also: [`CornerSpaceRenorm.steadystate_bicg_LtL`](@ref)
 """
-function steadystate_bicg(H::DenseOperator{B,B}, J::Vector{O}, l::Int=2; log::Bool=false, kwargs...) where {B<:Basis,O<:DenseOperator{B,B}}
+function steadystate_bicg(H::AbstractOperator{B,B}, J::Vector{O}, l::Int=2; log::Bool=false, kwargs...) where {B<:Basis,O<:AbstractOperator{B,B}}
+    @assert isdense(H) "The Hamiltonian must be dense"
+    @assert all(isdense.(J)) "The jump operators must be dense"
     ρ0 = DenseOperator(H.basis_l)
     ρ0.data[1,1] = ComplexF64(1.0)
     return steadystate_bicg!(ρ0,H,J,l;log=log,kwargs...)
@@ -59,7 +61,10 @@ the square of the size of the Hilbert space.
 
 See also: [`steadystate_bicg`](@ref)
 """
-function steadystate_bicg!(ρ0::DenseOperator{B,B}, H::DenseOperator{B,B}, J::Vector{O}, l::Int=2; log::Bool=false, tol::Float64 = sqrt(eps(real(ComplexF64))), kwargs...) where {B<:Basis,O<:DenseOperator{B,B}}
+function steadystate_bicg!(ρ0::AbstractOperator{B,B}, H::AbstractOperator{B,B}, J::Vector{O}, l::Int=2; log::Bool=false, tol::Float64 = sqrt(eps(real(ComplexF64))), kwargs...) where {B<:Basis,O<:AbstractOperator{B,B}}
+    @assert isdense(ρ0) "The initial density matrix must be dense"
+    @assert isdense(H) "The Hamiltonian must be dense"
+    @assert all(isdense.(J)) "The jump operators must be dense"
     # Size of the Hilbert space
     M::Int = size(H.data,1)
     # Non-Hermitian Hamiltonian
@@ -126,7 +131,7 @@ the square of the size of the Hilbert space.
 
 See also: [`steadystate_bicg`](@ref)
 """
-steadystate_bicg!(ρ0::DenseOperator{B,B}, s::AbstractSystem, l::Int=2; log::Bool=false, tol::Float64 = sqrt(eps(real(ComplexF64))), kwargs...) where {B<:Basis} = steadystate_bicg!(ρ0, DenseOperator(s.H), DenseOperator.(s.J), l; log=log, tol=tol, kwargs...)
+steadystate_bicg!(ρ0::AbstractOperator{B,B}, s::AbstractSystem, l::Int=2; log::Bool=false, tol::Float64 = sqrt(eps(real(ComplexF64))), kwargs...) where {B<:Basis} = steadystate_bicg!(ρ0, DenseOperator(s.H), DenseOperator.(s.J), l; log=log, tol=tol, kwargs...)
 
 """
     CornerSpaceRenorm.steadystate_bicg_LtL(H, J, l=2; [log=false], kwargs...) -> rho[, log]
@@ -144,7 +149,9 @@ to enfore the trace one but convergence is slower and poorer.
 
 See also: [`steadystate_bicg`](@ref)
 """
-function steadystate_bicg_LtL(H::DenseOperator{B,B}, J::Vector{O}, l::Int=2; log::Bool=false, kwargs...) where {B<:Basis,O<:DenseOperator{B,B}}
+function steadystate_bicg_LtL(H::AbstractOperator{B,B}, J::Vector{O}, l::Int=2; log::Bool=false, kwargs...) where {B<:Basis,O<:AbstractOperator{B,B}}
+    @assert isdense(H) "The Hamiltonian must be dense"
+    @assert all(isdense.(J)) "The jump operators must be dense"
     # Size of the Hilbert space
     M::Int = size(H.data,1)
     # Non-Hermitian Hamiltonian

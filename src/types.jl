@@ -217,8 +217,8 @@ Liouvillian. Can be a `Dict{String,<local operator type>}` of local operators or
 an array of `nv(lat)` `Dict{String,<global operator type>}`s of operators in the
 global basis.
 """
-function NdSystem(lat::NdLattice{M},H::O1,trate,lHt,J::Vector{O3},obs=missing) where {M,M1,M2,N,T<:Number,LB<:Basis,
-                                                       B<:CompositeBasis{Tuple{Vararg{LB,N}}},
+function NdSystem(lat::NdLattice{M},H::O1,trate,lHt,J::Vector{O3},obs=missing) where {M,M1,M2,N,S,T<:Number,LB<:Basis,
+                                                       B<:CompositeBasis{S,Tuple{Vararg{LB,N}}},
                                                        O1<:AbstractOperator{B,B},
                                                        O3<:AbstractOperator{B,B}}
     gbasis = H.basis_l;
@@ -351,6 +351,8 @@ Construct a corner basis with corner dimension `M` from two basis.
 """
 CornerBasis(b1::Basis, b2::Basis, M::Int64) = CornerBasis([M], M, [b1.shape, b2.shape])
 CornerBasis(b1::CornerBasis, b2::CornerBasis, M::Int64) = CornerBasis([M], M, vcat(b1.local_shapes, b2.local_shapes))
+
+CornerBasis(b::Basis, M::Int64) = CornerBasis([M], M, [b.shape])
 
 import Base: ==
 ==(b1::CornerBasis, b2::CornerBasis) = (b1.M .== b2.M) &&

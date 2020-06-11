@@ -136,13 +136,9 @@ basis and the eigenkets of A and B.
 * `ρB`: density matrix of the subsystem B.
 * `M`: corner dimension.
 """
-function corner_subspace(ρA::DenseOperator{B1,B1}, ρB::DenseOperator{B2,B2}, M::Int) where {B1<:Basis,B2<:Basis}
-    bA = ρA.basis_l
-    bB = ρB.basis_l
-    #ps_A, αs_A = eigen(hermitianize(ρA).data); # αs_A[:,i] : i-th eigenvector
-    #ps_B, αs_B = eigen(hermitianize(ρB).data);
-    ps_A, αs_A = eigen(ρA.data); # αs_A[:,i] : i-th eigenvector
-    ps_B, αs_B = eigen(ρB.data);
+function corner_subspace(ρA::DenseMatrix, bA::Basis, ρB::DenseMatrix, bB::Basis, M::Int)
+    ps_A, αs_A = eigen(ρA); # αs_A[:,i] : i-th eigenvector
+    ps_B, αs_B = eigen(ρB);
     mgs!(αs_A);
     mgs!(αs_B);
     @inbounds ϕs_A = [Ket(bA, αs_A[:,i]) for i in 1:length(ps_A)]
@@ -150,6 +146,13 @@ function corner_subspace(ρA::DenseOperator{B1,B1}, ρB::DenseOperator{B2,B2}, M
     handles, prod_pairs = max_prod_pairs(real.(ps_A), real.(ps_B), M)
     bC = typeof(bA) <: CompositeBasis ? CompositeBasis(bA.bases...,bB.bases...) : CompositeBasis(bA,bB)
     return CornerBasis(bA, bB, M), handles, ϕs_A, ϕs_B
+end
+function corner_subspace(ρA::AbstractOperator{B1,B1}, ρB::AbstractOperator{B2,B2}, M::Int) where {B1<:Basis,B2<:Basis}
+    if isdense(ρA) && isdense(ρB)
+        return corner_subspace(ρA.data, ρA.basis_l, ρB.data, ρB.basis_l, M)
+    else
+        return corner_subspace(Matrix(ρA.data), ρA.basis_l, Matrix(ρB.data), ρB.basis_l, M)
+    end
 end
 
 """
@@ -200,8 +203,8 @@ Merge two `NdSystem`s along the `d`-th direction with corner compression.
 * `M`: corner dimension.
 """
 function Base.merge(s1::NdSystem{N},s2::NdSystem{N},d::Integer,
-                    ρ1::DenseOperator{B1,B1},ρ2::DenseOperator{B2,B2},M::Int;
-                    return_dm=false) where {N,B1<:Basis,B2<:Basis}
+                    ρ1::Operator{B1,B1,T1},ρ2::Operator{B2,B2,T2},M::Int;
+                    return_dm=false) where {N,B1<:Basis,B2<:Basis,T1<:DenseMatrix,T2<:DenseMatrix}
     # TO DO: tests
     @assert 0 < M <= length(s1.gbasis)*length(s2.gbasis) "The corner dimension must not exceed that of the total Hilbert space."
     length(s1.lattice.Vext[d]) == length(s2.lattice.Vint[d]) || throw(DimensionMismatch("Lattices cannot be merged in this direction."))
