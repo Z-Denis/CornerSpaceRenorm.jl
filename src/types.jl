@@ -352,6 +352,8 @@ Construct a corner basis with corner dimension `M` from two basis.
 CornerBasis(b1::Basis, b2::Basis, M::Int64) = CornerBasis([M], M, [b1.shape, b2.shape])
 CornerBasis(b1::CornerBasis, b2::CornerBasis, M::Int64) = CornerBasis([M], M, vcat(b1.local_shapes, b2.local_shapes))
 
+CornerBasis(b::Basis, M::Int64) = CornerBasis([M], M, [b.shape])
+
 import Base: ==
 ==(b1::CornerBasis, b2::CornerBasis) = (b1.M .== b2.M) &&
                                        (b1.shape == b2.shape) &&
