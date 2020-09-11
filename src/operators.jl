@@ -29,6 +29,8 @@ function hamiltonian(L::Lattice, lH::O1, lHt::Tuple{Number,O2}) where {B<:Basis,
 
     return H;
 end
+hamiltonian(L::NdLattice{N}, lH::O1, lHt::Tuple{Number,O2}) where {N,B<:Basis,O1<:AbstractOperator{B,B},O2<:AbstractOperator{B,B}} = hamiltonian(L::NdLattice{N}, lH::O1, lHt[1], lHt[2])
+
 
 #function hamiltonian(L::Lattice, lH::O1, trate::Number, lHt::O2) where {N,Q,B<:Basis,O1<:AbstractOperator{B,B},O2<:AbstractOperator{B,B}}
 #    hamiltonian(L, lH, (trate, lHt))
@@ -64,11 +66,19 @@ function hamiltonian(L::NdLattice{N}, lH::O1, trate::Tuple{Vararg{Number,Q}}, lH
     for d in 1:N
         i_max = L.pbc && (L.shape[d] > 2) ? L.shape[d] : L.shape[d]-1
         E[d] = vcat([[Edge(e) for e in zip(lattice_slice(d,i),lattice_slice(d,i+1))] for i in 1:i_max]...)
+        if L.pbc
+            if L.shape[d] == 1
+                loops = [Edge(v=>v) for v in vertices(L)]
+                E[d] = [loops; loops]
+            elseif L.shape[d] == 2
+                E[d] = [E[d]; E[d]]
+            end
+        end
     end
 
     for d in 1:N
         for e in E[d]
-            H.data .+= trate[d] * embed(gbasis,[e.src, e.dst],[lHt; dagger(lHt)]).data;
+            H.data .+= trate[d] * embed_safe(gbasis, e, [lHt; dagger(lHt)]).data;
         end
     end
     H.data .= H.data + H.data';
@@ -131,10 +141,18 @@ function hamiltonian(L::NdLattice{N}, lH::O1, trate, lHt) where {N,B<:Basis,O1<:
     for d in 1:N
         i_max = L.pbc && (L.shape[d] > 2) ? L.shape[d] : L.shape[d]-1
         E[d] = vcat([[Edge(e) for e in zip(lattice_slice(d,i),lattice_slice(d,i+1))] for i in 1:i_max]...)
+        if L.pbc
+            if L.shape[d] == 1
+                loops = [Edge(v=>v) for v in vertices(L)]
+                E[d] = [loops; loops]
+            elseif L.shape[d] == 2
+                E[d] = [E[d]; E[d]]
+            end
+        end
     end
 
     for d in 1:N,  e in E[d], h in _lHt[d]
-        H.data .+= _trate[d] * embed(gbasis,[e.src, e.dst],[h, dagger(h)]).data;
+        H.data .+= _trate[d] * embed_safe(gbasis, e, [h, dagger(h)]).data;
     end
     H.data .= H.data + H.data';
 
@@ -143,6 +161,14 @@ function hamiltonian(L::NdLattice{N}, lH::O1, trate, lHt) where {N,B<:Basis,O1<:
     end
 
     return H
+end
+
+function embed_safe(gb::CompositeBasis, e::AbstractEdge, ops::AbstractVector{O}) where O<:AbstractOperator
+    if e.src != e.dst
+        embed(gb,[e.src, e.dst],ops)
+    else
+        embed(gb,e.src,prod(ops))
+    end
 end
 
 """

@@ -56,7 +56,7 @@ function Base.show(io::IO, ::MIME"text/plain", L::NdLattice)
     for d in 1:length(L.shape)
         print(io,"  d = ",d,":\n")
         print(io,"    Input vertices: ",L.Vint[d],"\n")
-        print(io,"    Input vertices: ",L.Vext[d],"\n")
+        print(io,"    Output vertices: ",L.Vext[d],"\n")
     end
 
     if L.pbc
