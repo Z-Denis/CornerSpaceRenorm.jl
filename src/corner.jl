@@ -278,17 +278,13 @@ function Base.merge(s1::NdSystem{N},s2::NdSystem{N},d::Integer,
     H = DenseOperator(bC)
     if lattice.pbc
         Ht1 = zeros(ComplexF64,size(s1.H.data))
-        if s1.lattice.shape[d] > 2
-            @inbounds for i in 1:length(s1.Htext[d])
-                Ht1 .+= s1.trate[d] * (s1.Htext[d][i] * dagger(s1.Htint[d][i])).data;
-            end
+        @inbounds for i in 1:length(s1.Htext[d])
+            Ht1 .+= s1.trate[d] * (s1.Htext[d][i] * dagger(s1.Htint[d][i])).data;
         end
         Ht2 = zeros(ComplexF64,size(s2.H.data))
-        if s2.lattice.shape[d] > 2
-            @inbounds for i in 1:length(s2.Htext[d])
+        @inbounds for i in 1:length(s2.Htext[d])
                 Ht2 .+= s2.trate[d] * (s2.Htext[d][i] * dagger(s2.Htint[d][i])).data;
             end
-        end
         H.data .= 𝒫1(DenseOperator(s1.gbasis, s1.H.data .- (Ht1 .+ Ht1'))).data .+ 𝒫2(DenseOperator(s2.gbasis, s2.H.data .- (Ht2 .+ Ht2'))).data;
     else
         H.data .= 𝒫1(s1.H).data .+ 𝒫2(s2.H).data;
